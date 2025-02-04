@@ -1,0 +1,23 @@
+ros-rolling-rmw-zenoh-cpp (0.3.1-1bookworm) bookworm; urgency=high
+
+  * Bump Zenoh to commit id e4ea6f0 (1.2.0 + few commits) (#446 <https://github.com/ros2/rmw_zenoh/issues/446>)
+  * Inform users that peers will not discover and communicate with one another until the router is started (#440 <https://github.com/ros2/rmw_zenoh/issues/440>)
+  * Clear the error after rmw_serialized_message_resize() (#435 <https://github.com/ros2/rmw_zenoh/issues/435>)
+  * Fix ZENOH_ROUTER_CHECK_ATTEMPTS which was not respected (#427 <https://github.com/ros2/rmw_zenoh/issues/427>)
+  * fix: use the default destructor to drop the member Payload (#419 <https://github.com/ros2/rmw_zenoh/issues/419>)
+  * Remove gid_hash_ from AttachmentData (#416 <https://github.com/ros2/rmw_zenoh/issues/416>)
+  * Sync the config with the default config in Zenoh. (#396 <https://github.com/ros2/rmw_zenoh/issues/396>)
+  * fix: check the context validity before accessing the session (#403 <https://github.com/ros2/rmw_zenoh/issues/403>)
+  * Fix wan't typo (#400 <https://github.com/ros2/rmw_zenoh/issues/400>)
+  * Contributors: ChenYing Kuo (CY), Chris Lalancette, Julien Enoch, Mahmoud Mazouz, Tim Clephas, Yuyuan Yuan, Yadunund
+
+ -- Yadunund <yadunund@openrobotics.org>  Tue, 04 Feb 2025 00:00:00 -0000
+
+ros-rolling-rmw-zenoh-cpp (0.3.0-1bookworm) bookworm; urgency=high
+
+  * An alternative middleware for ROS 2 based on Zenoh.
+  * Contributors: Alejandro Hernández Cordero, Alex Day, Bernd Pfrommer, ChenYing Kuo (CY), Chris Lalancette, Christophe Bedard, CihatAltiparmak, Esteve Fernandez, Franco Cipollone, Geoffrey Biggs, Hans-Martin, James Mount, Julien Enoch, Morgan Quigley, Nate Koenig, Shivang Vijay, Yadunund, Yuyuan Yuan, methylDragon
+
+ -- Yadunund <yadunund@openrobotics.org>  Thu, 02 Jan 2025 00:00:00 -0000
+
+
