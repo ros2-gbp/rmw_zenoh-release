@@ -37,8 +37,6 @@
 #include "rmw/get_topic_endpoint_info.h"
 #include "rmw/impl/cpp/macros.hpp"
 
-#include "tracetools/tracetools.h"
-
 namespace rmw_zenoh_cpp
 {
 // TODO(yuyuan): SHM, make this configurable
@@ -47,7 +45,6 @@ namespace rmw_zenoh_cpp
 ///=============================================================================
 std::shared_ptr<PublisherData> PublisherData::make(
   std::shared_ptr<zenoh::Session> session,
-  const rmw_publisher_t * const rmw_publisher,
   const rmw_node_t * const node,
   liveliness::NodeInfo node_info,
   std::size_t node_id,
@@ -161,7 +158,6 @@ std::shared_ptr<PublisherData> PublisherData::make(
 
   return std::shared_ptr<PublisherData>(
     new PublisherData{
-      rmw_publisher,
       node,
       std::move(entity),
       std::move(session),
@@ -175,7 +171,6 @@ std::shared_ptr<PublisherData> PublisherData::make(
 
 ///=============================================================================
 PublisherData::PublisherData(
-  const rmw_publisher_t * const rmw_publisher,
   const rmw_node_t * rmw_node,
   std::shared_ptr<liveliness::Entity> entity,
   std::shared_ptr<zenoh::Session> sess,
@@ -184,8 +179,7 @@ PublisherData::PublisherData(
   zenoh::LivelinessToken token,
   const void * type_support_impl,
   std::unique_ptr<MessageTypeSupport> type_support)
-: rmw_publisher_(rmw_publisher),
-  rmw_node_(rmw_node),
+: rmw_node_(rmw_node),
   entity_(std::move(entity)),
   sess_(std::move(sess)),
   pub_(std::move(pub)),
@@ -252,10 +246,10 @@ rmw_ret_t PublisherData::publish(
   // session use different encoding formats. In our case, all key expressions
   // will be encoded with CDR so it does not really matter.
   zenoh::ZResult result;
-  int64_t source_timestamp = rmw_zenoh_cpp::get_system_time_in_ns();
   auto options = zenoh::Publisher::PutOptions::create_default();
-  options.attachment = rmw_zenoh_cpp::AttachmentData(
-    sequence_number_++, source_timestamp, entity_->copy_gid()).serialize_to_zbytes();
+  options.attachment = create_map_and_set_sequence_num(
+    sequence_number_++,
+    entity_->copy_gid());
 
   // TODO(ahcorde): shmbuf
   std::vector<uint8_t> raw_data(
@@ -263,8 +257,6 @@ rmw_ret_t PublisherData::publish(
     reinterpret_cast<const uint8_t *>(msg_bytes) + data_length);
   zenoh::Bytes payload(std::move(raw_data));
 
-  TRACETOOLS_TRACEPOINT(
-    rmw_publish, static_cast<const void *>(rmw_publisher_), ros_message, source_timestamp);
   pub_.put(std::move(payload), std::move(options), &result);
   if (result != Z_OK) {
     if (result == Z_ESESSION_CLOSED) {
@@ -300,18 +292,14 @@ rmw_ret_t PublisherData::publish_serialized_message(
   // session use different encoding formats. In our case, all key expressions
   // will be encoded with CDR so it does not really matter.
   zenoh::ZResult result;
-  int64_t source_timestamp = rmw_zenoh_cpp::get_system_time_in_ns();
   auto options = zenoh::Publisher::PutOptions::create_default();
-  options.attachment = rmw_zenoh_cpp::AttachmentData(
-    sequence_number_++, source_timestamp, entity_->copy_gid()).serialize_to_zbytes();
+  options.attachment = create_map_and_set_sequence_num(sequence_number_++, entity_->copy_gid());
 
   std::vector<uint8_t> raw_data(
     serialized_message->buffer,
     serialized_message->buffer + data_length);
   zenoh::Bytes payload(std::move(raw_data));
 
-  TRACETOOLS_TRACEPOINT(
-    rmw_publish, static_cast<const void *>(rmw_publisher_), serialized_message, source_timestamp);
   pub_.put(std::move(payload), std::move(options), &result);
   if (result != Z_OK) {
     if (result == Z_ESESSION_CLOSED) {
