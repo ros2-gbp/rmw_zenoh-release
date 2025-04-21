@@ -2,7 +2,7 @@ name: style
 on:
   pull_request:
   push:
-    branches: [ rolling ]
+    branches: [ jazzy ]
 defaults:
   run:
     shell: bash
@@ -12,13 +12,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        distro: ['rolling']
+        distro: ['jazzy']
     container:
       image: ros:${{ matrix.distro }}-ros-base
     timeout-minutes: 30
     steps:
     - uses: actions/checkout@v4
     - name: uncrustify
-      run: /ros_entrypoint.sh ament_uncrustify rmw_zenoh_cpp/ zenoh_security_tools/
+      run: /ros_entrypoint.sh ament_uncrustify rmw_zenoh_cpp/
     - name: cpplint
-      run: /ros_entrypoint.sh ament_cpplint rmw_zenoh_cpp/ zenoh_security_tools/
+      run: /ros_entrypoint.sh ament_cpplint rmw_zenoh_cpp/
