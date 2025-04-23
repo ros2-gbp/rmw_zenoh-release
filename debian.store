@@ -1,1 +1,1 @@
-{"base": "2127e83cee59", "parent": "debian/rolling/zenoh_cpp_vendor", "previous": "72786c1eb606", "trim": "", "trimbase": ""}
+{"base": "8f2d4ab134a8", "parent": "debian/kilted/zenoh_cpp_vendor", "previous": "8df689316be3", "trim": "", "trimbase": ""}
