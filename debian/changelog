@@ -1,0 +1,22 @@
+ros-kilted-zenoh-security-tools (0.6.2-1noble) noble; urgency=high
+
+
+
+ -- Alejandro Hernanadez <alejandro@openrobotics.org>  Wed, 18 Jun 2025 00:00:00 -0000
+
+ros-kilted-zenoh-security-tools (0.6.1-1noble) noble; urgency=high
+
+  * Update CMakeLists.txt (#622 <https://github.com/ros2/rmw_zenoh/issues/622>)
+  * Fix warning on Windows (#618 <https://github.com/ros2/rmw_zenoh/issues/618>)
+  * Contributors: Alejandro Hernández Cordero, mosfet80
+
+ -- Alejandro Hernanadez <alejandro@openrobotics.org>  Tue, 20 May 2025 00:00:00 -0000
+
+ros-kilted-zenoh-security-tools (0.6.0-1noble) noble; urgency=high
+
+  * Add zenoh_security_tools (#595 <https://github.com/ros2/rmw_zenoh/issues/595>)
+  * Contributors: yadunund
+
+ -- Alejandro Hernanadez <alejandro@openrobotics.org>  Fri, 18 Apr 2025 00:00:00 -0000
+
+
