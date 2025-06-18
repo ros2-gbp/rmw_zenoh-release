@@ -2,6 +2,9 @@
 Changelog for package zenoh_security_tools
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.6.2 (2025-06-18)
+------------------
+
 0.6.1 (2025-05-20)
 ------------------
 * Update CMakeLists.txt (`#622 <https://github.com/ros2/rmw_zenoh/issues/622>`_)
