@@ -217,11 +217,10 @@ Here are two ways to configure on the remote side:
 2. A simpler way is to override the config by `ZENOH_CONFIG_OVERRIDE`
 
     ```bash
-    export ZENOH_CONFIG_OVERRIDE='mode="client";connect/endpoints=["tcp/192.168.1.1:7447"]' 
+    export ZENOH_CONFIG_OVERRIDE='mode="client";connect/endpoints=["tcp/192.168.1.1:7447"]'
     ```
 
 ## Security
-
 Security is available in `rmw_zenoh` by means of access control, authentication and encryption.
 The [zenoh_security_tools](./zenoh_security_tools/) package contains a script to generate Zenoh configs with security configured along with documentation on its usage.
 
@@ -298,10 +297,3 @@ For more details, see https://github.com/ros2/rmw_zenoh/issues/170.
 Since Iron, ROS 2 introduced type hashes for messages and `rmw_zenoh` includes these type hashes in the Zenoh keyexpressions it constructs for data exchange. While participants will be discoverable, communication between Humble and newer distributions will fail, resulting in messages being silently dropped.
 
 For more details, see https://github.com/ros2/rmw_zenoh/issues/569.
-
-## Quality Declaration files
-
-Quality Declarations for each package in this repository:
-
-* [`rmw_zenoh_cpp`](rmw_zenoh_cpp/QUALITY_DECLARATION.md)
-* [`zenoh_cpp_vendor`](zenoh_cpp_vendor/QUALITY_DECLARATION.md)
