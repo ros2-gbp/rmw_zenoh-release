@@ -2,21 +2,18 @@
 Changelog for package rmw_zenoh_cpp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-0.8.0 (2025-06-18)
+0.6.2 (2025-06-18)
 ------------------
-* Use data() to avoid potentially dereferencing an empty vector (`#667 <https://github.com/ros2/rmw_zenoh/issues/667>`_)
-* Bump Zenoh to 1.4.0 (`#652 <https://github.com/ros2/rmw_zenoh/issues/652>`_)
+* Use data() to avoid potentially dereferencing an empty vector (`#668 <https://github.com/ros2/rmw_zenoh/issues/668>`_)
+* Bump Zenoh to 1.4.0 (`#657 <https://github.com/ros2/rmw_zenoh/issues/657>`_)
 * Contributors: Julien Enoch, Øystein Sture
 
-0.7.1 (2025-05-19)
+0.6.1 (2025-05-20)
 ------------------
-* fix(comment): correct the QoS incompatibilities (`#644 <https://github.com/ros2/rmw_zenoh/issues/644>`_)
-* fix rmw_take_serialized_message. (`#638 <https://github.com/ros2/rmw_zenoh/issues/638>`_)
-* Update CMakeLists.txt (`#617 <https://github.com/ros2/rmw_zenoh/issues/617>`_)
-* Contributors: Alejandro Hernández Cordero, Tomoya Fujita, Yuyuan Yuan, mosfet80
-
-0.7.0 (2025-04-24)
-------------------
+* fix(comment): correct the QoS incompatibilities (`#645 <https://github.com/ros2/rmw_zenoh/issues/645>`_)
+* fix rmw_take_serialized_message. (`#639 <https://github.com/ros2/rmw_zenoh/issues/639>`_)
+* Update CMakeLists.txt (`#622 <https://github.com/ros2/rmw_zenoh/issues/622>`_)
+* Contributors: Alejandro Hernández Cordero, mosfet80, Tomoya Fujita
 
 0.6.0 (2025-04-18)
 ------------------
