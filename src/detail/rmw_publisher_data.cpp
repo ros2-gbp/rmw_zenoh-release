@@ -37,14 +37,21 @@
 #include "rmw/get_topic_endpoint_info.h"
 #include "rmw/impl/cpp/macros.hpp"
 
+#include "tracetools/tracetools.h"
+
 namespace rmw_zenoh_cpp
 {
 // TODO(yuyuan): SHM, make this configurable
 #define SHM_BUF_OK_SIZE 2621440
 
+// Period (ms) of heartbeats sent for detection of lost samples
+// by a RELIABLE + TRANSIENT_LOCAL Publisher
+#define SAMPLE_MISS_DETECTION_HEARTBEAT_PERIOD 500
+
 ///=============================================================================
 std::shared_ptr<PublisherData> PublisherData::make(
   std::shared_ptr<zenoh::Session> session,
+  const rmw_publisher_t * const rmw_publisher,
   const rmw_node_t * const node,
   liveliness::NodeInfo node_info,
   std::size_t node_id,
@@ -89,40 +96,45 @@ std::shared_ptr<PublisherData> PublisherData::make(
     return nullptr;
   }
 
-  zenoh::ZResult result;
-  std::optional<zenoh::ext::PublicationCache> pub_cache;
-  zenoh::KeyExpr pub_ke(entity->topic_info()->topic_keyexpr_);
-  // Create a Publication Cache if durability is transient_local.
+  using AdvancedPublisherOptions = zenoh::ext::SessionExt::AdvancedPublisherOptions;
+  auto adv_pub_opts = AdvancedPublisherOptions::create_default();
+
   if (adapted_qos_profile.durability == RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL) {
-    zenoh::ext::SessionExt::PublicationCacheOptions pub_cache_opts =
-      zenoh::ext::SessionExt::PublicationCacheOptions::create_default();
-
-    pub_cache_opts.history = adapted_qos_profile.depth;
-    pub_cache_opts.queryable_complete = true;
-
-    std::string queryable_prefix = entity->zid();
-    pub_cache_opts.queryable_prefix = zenoh::KeyExpr(queryable_prefix);
-
-    pub_cache = session->ext().declare_publication_cache(
-      pub_ke, std::move(pub_cache_opts), &result);
-
-    if (result != Z_OK) {
-      RMW_SET_ERROR_MSG("unable to create zenoh publisher cache");
-      return nullptr;
+    // Allow this publisher to be detected through liveliness.
+    adv_pub_opts.publisher_detection = true;
+    adv_pub_opts.cache = AdvancedPublisherOptions::CacheOptions::create_default();
+    adv_pub_opts.cache->max_samples = adapted_qos_profile.depth;
+    if (adapted_qos_profile.reliability == RMW_QOS_POLICY_RELIABILITY_RELIABLE) {
+      // If RELIABLE + TRANSIENT_LOCAL activate sample miss detection for subscriber
+      // to detect missed samples and retrieve those from the Publisher cache.
+      // HeartbeatSporadic is used to prevent excessive background traffic
+      adv_pub_opts.sample_miss_detection.emplace().heartbeat =
+        AdvancedPublisherOptions::SampleMissDetectionOptions::HeartbeatSporadic{
+        SAMPLE_MISS_DETECTION_HEARTBEAT_PERIOD};
     }
   }
 
+  zenoh::KeyExpr pub_ke(entity->topic_info()->topic_keyexpr_);
   // Set congestion_control to BLOCK if appropriate.
-  zenoh::Session::PublisherOptions opts = zenoh::Session::PublisherOptions::create_default();
-  opts.congestion_control = Z_CONGESTION_CONTROL_DROP;
+  auto pub_opts = zenoh::Session::PublisherOptions::create_default();
+  pub_opts.congestion_control = Z_CONGESTION_CONTROL_DROP;
   if (adapted_qos_profile.reliability == RMW_QOS_POLICY_RELIABILITY_RELIABLE) {
-    opts.reliability = Z_RELIABILITY_RELIABLE;
-
+    pub_opts.reliability = Z_RELIABILITY_RELIABLE;
     if (adapted_qos_profile.history == RMW_QOS_POLICY_HISTORY_KEEP_ALL) {
-      opts.congestion_control = Z_CONGESTION_CONTROL_BLOCK;
+      pub_opts.congestion_control = Z_CONGESTION_CONTROL_BLOCK;
     }
+  } else {
+    pub_opts.reliability = Z_RELIABILITY_BEST_EFFORT;
   }
-  auto pub = session->declare_publisher(pub_ke, std::move(opts), &result);
+  adv_pub_opts.publisher_options = pub_opts;
+
+  zenoh::ZResult result;
+  auto adv_pub = session->ext().declare_advanced_publisher(
+    pub_ke, std::move(adv_pub_opts), &result);
+  if (result != Z_OK) {
+    RMW_SET_ERROR_MSG("unable to create zenoh publisher cache");
+    return nullptr;
+  }
 
   if (result != Z_OK) {
     RMW_SET_ERROR_MSG("Unable to create Zenoh publisher.");
@@ -143,11 +155,11 @@ std::shared_ptr<PublisherData> PublisherData::make(
 
   return std::shared_ptr<PublisherData>(
     new PublisherData{
+      rmw_publisher,
       node,
       std::move(entity),
       std::move(session),
-      std::move(pub),
-      std::move(pub_cache),
+      std::move(adv_pub),
       std::move(token),
       type_support->data,
       std::move(message_type_support)
@@ -156,19 +168,19 @@ std::shared_ptr<PublisherData> PublisherData::make(
 
 ///=============================================================================
 PublisherData::PublisherData(
+  const rmw_publisher_t * const rmw_publisher,
   const rmw_node_t * rmw_node,
   std::shared_ptr<liveliness::Entity> entity,
   std::shared_ptr<zenoh::Session> sess,
-  zenoh::Publisher pub,
-  std::optional<zenoh::ext::PublicationCache> pub_cache,
+  zenoh::ext::AdvancedPublisher pub,
   zenoh::LivelinessToken token,
   const void * type_support_impl,
   std::unique_ptr<MessageTypeSupport> type_support)
-: rmw_node_(rmw_node),
+: rmw_publisher_(rmw_publisher),
+  rmw_node_(rmw_node),
   entity_(std::move(entity)),
   sess_(std::move(sess)),
   pub_(std::move(pub)),
-  pub_cache_(std::move(pub_cache)),
   token_(std::move(token)),
   type_support_impl_(type_support_impl),
   type_support_(std::move(type_support)),
@@ -231,10 +243,10 @@ rmw_ret_t PublisherData::publish(
   // session use different encoding formats. In our case, all key expressions
   // will be encoded with CDR so it does not really matter.
   zenoh::ZResult result;
-  auto options = zenoh::Publisher::PutOptions::create_default();
-  options.attachment = create_map_and_set_sequence_num(
-    sequence_number_++,
-    entity_->copy_gid());
+  int64_t source_timestamp = rmw_zenoh_cpp::get_system_time_in_ns();
+  auto opts = zenoh::ext::AdvancedPublisher::PutOptions::create_default();
+  opts.put_options.attachment = rmw_zenoh_cpp::AttachmentData(
+    sequence_number_++, source_timestamp, entity_->copy_gid()).serialize_to_zbytes();
 
   // TODO(ahcorde): shmbuf
   std::vector<uint8_t> raw_data(
@@ -242,7 +254,9 @@ rmw_ret_t PublisherData::publish(
     reinterpret_cast<const uint8_t *>(msg_bytes) + data_length);
   zenoh::Bytes payload(std::move(raw_data));
 
-  pub_.put(std::move(payload), std::move(options), &result);
+  TRACEPOINT(
+    rmw_publish, ros_message);
+  pub_.put(std::move(payload), std::move(opts), &result);
   if (result != Z_OK) {
     if (result == Z_ESESSION_CLOSED) {
       RMW_ZENOH_LOG_WARN_NAMED(
@@ -277,15 +291,17 @@ rmw_ret_t PublisherData::publish_serialized_message(
   // session use different encoding formats. In our case, all key expressions
   // will be encoded with CDR so it does not really matter.
   zenoh::ZResult result;
-  auto options = zenoh::Publisher::PutOptions::create_default();
-  options.attachment = create_map_and_set_sequence_num(sequence_number_++, entity_->copy_gid());
+  int64_t source_timestamp = rmw_zenoh_cpp::get_system_time_in_ns();
+  auto opts = zenoh::ext::AdvancedPublisher::PutOptions::create_default();
+  opts.put_options.attachment = rmw_zenoh_cpp::AttachmentData(
+    sequence_number_++, source_timestamp, entity_->copy_gid()).serialize_to_zbytes();
 
   std::vector<uint8_t> raw_data(
     serialized_message->buffer,
     serialized_message->buffer + data_length);
   zenoh::Bytes payload(std::move(raw_data));
 
-  pub_.put(std::move(payload), std::move(options), &result);
+  pub_.put(std::move(payload), std::move(opts), &result);
   if (result != Z_OK) {
     if (result == Z_ESESSION_CLOSED) {
       RMW_ZENOH_LOG_WARN_NAMED(
@@ -300,10 +316,10 @@ rmw_ret_t PublisherData::publish_serialized_message(
 }
 
 ///=============================================================================
-std::size_t PublisherData::keyexpr_hash() const
+std::size_t PublisherData::gid_hash() const
 {
   std::lock_guard<std::mutex> lock(mutex_);
-  return entity_->keyexpr_hash();
+  return entity_->gid_hash();
 }
 
 ///=============================================================================
