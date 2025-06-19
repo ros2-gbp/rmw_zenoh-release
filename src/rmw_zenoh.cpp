@@ -55,6 +55,8 @@
 #include "rmw/validate_namespace.h"
 #include "rmw/validate_node_name.h"
 
+#include "tracetools/tracetools.h"
+
 namespace
 {
 //==============================================================================
@@ -453,6 +455,12 @@ rmw_create_publisher(
   free_topic_name.cancel();
   free_rmw_publisher.cancel();
 
+  rmw_gid_t gid{};
+  // Trigger tracepoint even if we cannot get the GID
+  rmw_ret_t gid_ret = rmw_get_gid_for_publisher(rmw_publisher, &gid);
+  static_cast<void>(gid_ret);
+  TRACEPOINT(
+    rmw_publisher_init, static_cast<const void *>(rmw_publisher), gid.data);
   return rmw_publisher;
 }
 
@@ -486,7 +494,7 @@ rmw_destroy_publisher(rmw_node_t * node, rmw_publisher_t * publisher)
     return RMW_RET_INVALID_ARGUMENT;
   }
   // Remove any event callbacks registered to this publisher.
-  context_impl->graph_cache()->remove_qos_event_callbacks(pub_data->keyexpr_hash());
+  context_impl->graph_cache()->remove_qos_event_callbacks(pub_data->gid_hash());
   // Remove the PublisherData from NodeData.
   node_data->delete_pub_data(publisher);
 
@@ -922,7 +930,8 @@ rmw_create_subscription(
       context_impl->get_next_entity_id(),
       topic_name,
       type_support,
-      qos_profile))
+      qos_profile,
+      *subscription_options))
   {
     // Error already handled.
     return nullptr;
@@ -949,6 +958,12 @@ rmw_create_subscription(
   free_topic_name.cancel();
   free_rmw_subscription.cancel();
 
+  // rmw does not require GIDs for subscriptions, and GIDs in rmw_zenoh are not based on any ID of
+  // the underlying zenoh objects, so there is no need to collect a GID here
+  rmw_gid_t gid{};
+  static_cast<void>(gid);
+  TRACEPOINT(
+    rmw_subscription_init, static_cast<const void *>(rmw_subscription), gid.data);
   return rmw_subscription;
 }
 
@@ -1093,7 +1108,15 @@ rmw_take(
     static_cast<rmw_zenoh_cpp::SubscriptionData *>(subscription->data);
   RMW_CHECK_ARGUMENT_FOR_NULL(sub_data, RMW_RET_INVALID_ARGUMENT);
 
-  return sub_data->take_one_message(ros_message, nullptr, taken);
+  rmw_message_info_t message_info{};
+  rmw_ret_t ret = sub_data->take_one_message(ros_message, &message_info, taken);
+  TRACEPOINT(
+    rmw_take,
+    static_cast<const void *>(subscription),
+    static_cast<const void *>(ros_message),
+    message_info.source_timestamp,
+    *taken);
+  return ret;
 }
 
 //==============================================================================
@@ -1122,7 +1145,14 @@ rmw_take_with_info(
     static_cast<rmw_zenoh_cpp::SubscriptionData *>(subscription->data);
   RMW_CHECK_ARGUMENT_FOR_NULL(sub_data, RMW_RET_INVALID_ARGUMENT);
 
-  return sub_data->take_one_message(ros_message, message_info, taken);
+  rmw_ret_t ret = sub_data->take_one_message(ros_message, message_info, taken);
+  TRACEPOINT(
+    rmw_take,
+    static_cast<const void *>(subscription),
+    static_cast<const void *>(ros_message),
+    message_info->source_timestamp,
+    *taken);
+  return ret;
 }
 
 //==============================================================================
@@ -1228,11 +1258,18 @@ __rmw_take_serialized(
     static_cast<rmw_zenoh_cpp::SubscriptionData *>(subscription->data);
   RMW_CHECK_ARGUMENT_FOR_NULL(sub_data, RMW_RET_INVALID_ARGUMENT);
 
-  return sub_data->take_serialized_message(
+  rmw_ret_t ret = sub_data->take_serialized_message(
     serialized_message,
     taken,
     message_info
   );
+  TRACEPOINT(
+    rmw_take,
+    static_cast<const void *>(subscription),
+    static_cast<const void *>(serialized_message),
+    message_info->source_timestamp,
+    *taken);
+  return ret;
 }
 }  // namespace
 
@@ -1415,7 +1452,8 @@ rmw_create_client(
   // TODO(Yadunund): We cannot store the rmw_node_t * here since this type erased
   // Client handle will be returned in the rmw_clients_t in rmw_wait
   // from which we cannot obtain ClientData.
-  rmw_client->data = static_cast<void *>(node_data->get_client_data(rmw_client).get());
+  rmw_zenoh_cpp::ClientDataPtr client_data = node_data->get_client_data(rmw_client);
+  rmw_client->data = static_cast<void *>(client_data.get());
   rmw_client->implementation_identifier = rmw_zenoh_cpp::rmw_zenoh_identifier;
   rmw_client->service_name = rcutils_strdup(service_name, *allocator);
   RMW_CHECK_FOR_NULL_WITH_MSG(
@@ -1523,6 +1561,7 @@ rmw_take_response(
   RMW_CHECK_FOR_NULL_WITH_MSG(
     client->data, "Unable to retrieve client_data from client.", RMW_RET_INVALID_ARGUMENT);
   RMW_CHECK_ARGUMENT_FOR_NULL(ros_response, RMW_RET_INVALID_ARGUMENT);
+  RMW_CHECK_ARGUMENT_FOR_NULL(request_header, RMW_RET_INVALID_ARGUMENT);
 
   return client_data->take_response(request_header, ros_response, taken);
 }
@@ -2067,6 +2106,11 @@ check_and_attach_condition(
     }
   }
 
+  // No conditions are available. Set the triggered flag of the wait_set to false.
+  // Note that wait_set_data->condition_mutex has been locked before calling
+  // check_and_attach_condition. So it's safe to modify the wait_set_data triggered flag.
+  wait_set_data->triggered = false;
+
   return false;
 }
 }  // namespace
@@ -2098,7 +2142,7 @@ rmw_wait(
   // rmw_wait should return *all* entities that have data available, and let the caller decide
   // how to handle them.
   //
-  // If there is no data currently available in any of the entities we were told to wait on, we
+  // If there is no data currently available in any of the entities we were told to wait on,
   // we attach a context-global condition variable to each entity, calculate a timeout based on
   // wait_timeout, and then sleep on the condition variable.  If any of the entities has an event
   // during that time, it will wake up from that sleep.
@@ -2111,33 +2155,37 @@ rmw_wait(
   // signals to the upper layers that it isn't ready.  If something is ready, then we leave it as
   // a valid pointer.
 
-  bool skip_wait = check_and_attach_condition(
-    subscriptions, guard_conditions, services, clients, events, wait_set_data);
-  if (!skip_wait) {
+  {
+    // Take the lock before the check_and_attach_condition to ensure conditions and flags
+    // are not modified while being checked by concurrent calls.
     std::unique_lock<std::mutex> lock(wait_set_data->condition_mutex);
 
-    // According to the RMW documentation, if wait_timeout is NULL that means
-    // "wait forever", if it specified as 0 it means "never wait", and if it is anything else wait
-    // for that amount of time.
-    if (wait_timeout == nullptr) {
-      wait_set_data->condition_variable.wait(
-        lock, [wait_set_data]() {
-          return wait_set_data->triggered;
-        });
-    } else {
-      if (wait_timeout->sec != 0 || wait_timeout->nsec != 0) {
-        wait_set_data->condition_variable.wait_for(
-          lock,
-          std::chrono::nanoseconds(wait_timeout->nsec + RCUTILS_S_TO_NS(wait_timeout->sec)),
-          [wait_set_data]() {return wait_set_data->triggered;});
+    bool skip_wait = check_and_attach_condition(
+      subscriptions, guard_conditions, services, clients, events, wait_set_data);
+    if (!skip_wait) {
+      // According to the RMW documentation, if wait_timeout is NULL that means
+      // "wait forever", if it specified as 0 it means "never wait", and if it is anything else wait
+      // for that amount of time.
+      if (wait_timeout == nullptr) {
+        wait_set_data->condition_variable.wait(
+          lock, [wait_set_data]() {
+            return wait_set_data->triggered;
+          });
+      } else {
+        if (wait_timeout->sec != 0 || wait_timeout->nsec != 0) {
+          wait_set_data->condition_variable.wait_for(
+            lock,
+            std::chrono::nanoseconds(wait_timeout->nsec + RCUTILS_S_TO_NS(wait_timeout->sec)),
+            [wait_set_data]() {return wait_set_data->triggered;});
+        }
       }
-    }
 
-    // It is important to reset this here while still holding the lock, otherwise every subsequent
-    // call to rmw_wait() will be immediately ready.  We could handle this another way by making
-    // "triggered" a stack variable in this function and "attaching" it during
-    // "check_and_attach_condition", but that isn't clearly better so leaving this.
-    wait_set_data->triggered = false;
+      // It is important to reset this here while still holding the lock, otherwise every subsequent
+      // call to rmw_wait() will be immediately ready.  We could handle this another way by making
+      // "triggered" a stack variable in this function and "attaching" it during
+      // "check_and_attach_condition", but that isn't clearly better so leaving this.
+      wait_set_data->triggered = false;
+    }
   }
 
   bool wait_result = false;

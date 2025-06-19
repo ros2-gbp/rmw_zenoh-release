@@ -141,6 +141,7 @@ bool NodeData::create_pub_data(
 
   auto pub_data = PublisherData::make(
     session,
+    publisher,
     node_,
     entity_->node_info(),
     id_,
@@ -189,7 +190,8 @@ bool NodeData::create_sub_data(
   std::size_t id,
   const std::string & topic_name,
   const rosidl_message_type_support_t * type_support,
-  const rmw_qos_profile_t * qos_profile)
+  const rmw_qos_profile_t * qos_profile,
+  const rmw_subscription_options_t & sub_options)
 {
   std::lock_guard<std::recursive_mutex> lock_guard(mutex_);
   if (is_shutdown_) {
@@ -215,7 +217,8 @@ bool NodeData::create_sub_data(
     std::move(id),
     std::move(topic_name),
     type_support,
-    qos_profile);
+    qos_profile,
+    sub_options);
   if (sub_data == nullptr) {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
@@ -276,6 +279,7 @@ bool NodeData::create_service_data(
   auto service_data = ServiceData::make(
     session,
     node_,
+    service,
     entity_->node_info(),
     id_,
     std::move(id),
