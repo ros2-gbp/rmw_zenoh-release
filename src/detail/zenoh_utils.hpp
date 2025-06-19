@@ -30,17 +30,13 @@
 namespace rmw_zenoh_cpp
 {
 ///=============================================================================
-zenoh::Bytes create_map_and_set_sequence_num(
-  int64_t sequence_number, std::array<uint8_t, 16> gid);
-
-///=============================================================================
 // A class to store the replies to service requests.
 class ZenohReply final
 {
 public:
   ZenohReply(const zenoh::Reply & reply, std::chrono::nanoseconds::rep received_timestamp);
 
-  ~ZenohReply();
+  ~ZenohReply() = default;
 
   const zenoh::Reply & get_sample() const;
 
@@ -58,7 +54,7 @@ class ZenohQuery final
 public:
   ZenohQuery(const zenoh::Query & query, std::chrono::nanoseconds::rep received_timestamp);
 
-  ~ZenohQuery();
+  ~ZenohQuery() = default;
 
   const zenoh::Query & get_query() const;
 
