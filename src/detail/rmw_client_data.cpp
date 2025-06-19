@@ -306,7 +306,7 @@ rmw_ret_t ClientData::send_request(
   const void * ros_request,
   int64_t * sequence_id)
 {
-  std::lock_guard<std::recursive_mutex> lock(mutex_);
+  std::unique_lock<std::recursive_mutex> lock(mutex_);
   if (is_shutdown_) {
     return RMW_RET_OK;
   }
@@ -350,8 +350,9 @@ rmw_ret_t ClientData::send_request(
 
   // Send request
   zenoh::Session::GetOptions opts = zenoh::Session::GetOptions::create_default();
-  std::array<uint8_t, 16> local_gid = entity_->copy_gid();
-  opts.attachment = rmw_zenoh_cpp::create_map_and_set_sequence_num(*sequence_id, local_gid);
+  int64_t source_timestamp = rmw_zenoh_cpp::get_system_time_in_ns();
+  opts.attachment = rmw_zenoh_cpp::AttachmentData(
+    *sequence_id, source_timestamp, entity_->copy_gid()).serialize_to_zbytes();
   opts.target = Z_QUERY_TARGET_ALL_COMPLETE;
   // The default timeout for a z_get query is 10 seconds and if a response is not received within
   // this window, the queryable will return an invalid reply. However, it is common for actions,
@@ -371,6 +372,9 @@ rmw_ret_t ClientData::send_request(
   std::weak_ptr<rmw_zenoh_cpp::ClientData> client_data = shared_from_this();
   zenoh::ZResult result;
   std::string parameters;
+  // We explicitly release the mutex here to avoid an ABBA deadlock as
+  // documented in https://github.com/ros2/rmw_zenoh/issues/484.
+  lock.unlock();
   context_impl->session()->get(
     keyexpr_.value(),
     parameters,
