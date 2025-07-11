@@ -65,7 +65,7 @@ public:
   bool liveliness_is_valid() const;
 
   // Copy the GID of this ClientData into an rmw_gid_t.
-  std::array<uint8_t, RMW_GID_STORAGE_SIZE> copy_gid() const;
+  std::array<uint8_t, 16> copy_gid() const;
 
   // Add a new ZenohReply to the queue.
   void add_new_reply(std::unique_ptr<rmw_zenoh_cpp::ZenohReply> reply);
@@ -109,6 +109,7 @@ private:
     const rmw_client_t * client,
     std::shared_ptr<liveliness::Entity> entity,
     std::shared_ptr<zenoh::Session> sess,
+    zenoh::Querier querier_,
     const void * request_type_support_impl,
     const void * response_type_support_impl,
     std::shared_ptr<RequestTypeSupport> request_type_support,
@@ -124,8 +125,8 @@ private:
   std::shared_ptr<liveliness::Entity> entity_;
   // A shared session.
   std::shared_ptr<zenoh::Session> sess_;
-  // An owned keyexpression.
-  std::optional<zenoh::KeyExpr> keyexpr_;
+  // Zenoh querier
+  zenoh::Querier querier_;
   // Liveliness token for the service.
   std::optional<zenoh::LivelinessToken> token_;
   // Type support fields.

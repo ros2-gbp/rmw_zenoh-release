@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>rmw_zenoh_cpp</name>
-  <version>0.8.1</version>
+  <version>0.1.4</version>
   <description>A ROS 2 middleware implementation using zenoh-cpp</description>
   <maintainer email="yadunund@openrobotics.org">Yadunund</maintainer>
 
@@ -14,7 +14,6 @@
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <build_depend>nlohmann-json-dev</build_depend>
   <build_depend>zenoh_cpp_vendor</build_depend>
   <build_export_depend>zenoh_cpp_vendor</build_export_depend>
 
@@ -25,14 +24,12 @@
   <depend>rosidl_typesupport_fastrtps_c</depend>
   <depend>rosidl_typesupport_fastrtps_cpp</depend>
   <depend>rmw</depend>
-  <depend>rmw_test_fixture</depend>
   <depend>tracetools</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
 
   <member_of_group>rmw_implementation_packages</member_of_group>
-  <member_of_group>rmw_test_fixture_implementation_packages</member_of_group>
 
   <export>
     <build_type>ament_cmake</build_type>

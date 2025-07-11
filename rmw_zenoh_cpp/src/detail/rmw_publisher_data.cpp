@@ -67,27 +67,12 @@ std::shared_ptr<PublisherData> PublisherData::make(
     return nullptr;
   }
 
-  rcutils_allocator_t * allocator = &node->context->options.allocator;
-
-  const rosidl_type_hash_t * type_hash = type_support->get_type_hash_func(type_support);
   auto callbacks = static_cast<const message_type_support_callbacks_t *>(type_support->data);
   auto message_type_support = std::make_unique<MessageTypeSupport>(callbacks);
 
-  // Convert the type hash to a string so that it can be included in
-  // the keyexpr.
-  char * type_hash_c_str = nullptr;
-  rcutils_ret_t stringify_ret = rosidl_stringify_type_hash(
-    type_hash,
-    *allocator,
-    &type_hash_c_str);
-  if (RCUTILS_RET_BAD_ALLOC == stringify_ret) {
-    // rosidl_stringify_type_hash already set the error
-    return nullptr;
-  }
-  auto always_free_type_hash_c_str = rcpputils::make_scope_exit(
-    [&allocator, &type_hash_c_str]() {
-      allocator->deallocate(type_hash_c_str, allocator->state);
-    });
+  // Humble doesn't support type hash, but we leave it in place as a constant so we don't have to
+  // change the graph and liveliness token code.
+  const char * type_hash_c_str = "TypeHashNotSupported";
 
   std::size_t domain_id = node_info.domain_id_;
   auto entity = liveliness::Entity::make(
@@ -269,8 +254,8 @@ rmw_ret_t PublisherData::publish(
     reinterpret_cast<const uint8_t *>(msg_bytes) + data_length);
   zenoh::Bytes payload(std::move(raw_data));
 
-  TRACETOOLS_TRACEPOINT(
-    rmw_publish, static_cast<const void *>(rmw_publisher_), ros_message, source_timestamp);
+  TRACEPOINT(
+    rmw_publish, ros_message);
   pub_.put(std::move(payload), std::move(opts), &result);
   if (result != Z_OK) {
     if (result == Z_ESESSION_CLOSED) {
@@ -316,8 +301,6 @@ rmw_ret_t PublisherData::publish_serialized_message(
     serialized_message->buffer + data_length);
   zenoh::Bytes payload(std::move(raw_data));
 
-  TRACETOOLS_TRACEPOINT(
-    rmw_publish, static_cast<const void *>(rmw_publisher_), serialized_message, source_timestamp);
   pub_.put(std::move(payload), std::move(opts), &result);
   if (result != Z_OK) {
     if (result == Z_ESESSION_CLOSED) {
@@ -346,7 +329,7 @@ liveliness::TopicInfo PublisherData::topic_info() const
   return entity_->topic_info().value();
 }
 
-std::array<uint8_t, RMW_GID_STORAGE_SIZE> PublisherData::copy_gid() const
+std::array<uint8_t, 16> PublisherData::copy_gid() const
 {
   std::lock_guard<std::mutex> lock(mutex_);
   return entity_->copy_gid();
@@ -396,14 +379,14 @@ rmw_ret_t PublisherData::shutdown()
   if (result != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
-      "Unable to undeclare liveliness token");
+      "Unable to undeclare the liveliness token");
     return RMW_RET_ERROR;
   }
   std::move(pub_).undeclare(&result);
   if (result != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
-      "Unable to undeclare publisher");
+      "Unable to undeclare the publisher");
     return RMW_RET_ERROR;
   }
 
