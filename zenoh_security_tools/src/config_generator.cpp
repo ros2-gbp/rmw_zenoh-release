@@ -36,7 +36,6 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <unordered_map>
 #include <utility>
 
 #include <nlohmann/json.hpp>
@@ -44,7 +43,7 @@
 #include "rcpputils/scope_exit.hpp"
 #include "rcutils/allocator.h"
 #include "rcutils/types/string_map.h"
-#include "rmw_dds_common/security.hpp"
+#include "rmw_security_common/security.hpp"
 
 #include <zenoh.hxx>
 
@@ -97,7 +96,7 @@ bool replace(
   const std::string & to)
 {
   size_t start_pos = str.find(from);
-  if (start_pos == std::string::npos) {
+  if(start_pos == std::string::npos) {
     return false;
   }
   str.replace(start_pos, from.length(), to);
@@ -153,9 +152,8 @@ void ConfigGenerator::parse_services(
         }
 
         if (permission_s == nullptr) {
-          throw std::runtime_error(
-                  "Not able to get permission from service " +
-                  std::to_string(services_node->GetLineNum()));
+          throw std::runtime_error("Not able to get permission from service " +
+            std::to_string(services_node->GetLineNum()));
         }
         std::string permission = permission_s;
 
@@ -210,139 +208,124 @@ void ConfigGenerator::fill_access_control(
   json policies_rules = json::array();
 
   if (!services_reply_allow_.empty()) {
-    json rule_allow_reply = json::object(
-      {
+    json rule_allow_reply = json::object({
         {"id", "incoming_queries"},
         {"messages", json::array({"query"})},
         {"flows", json::array({"ingress"})},
         {"permission", "allow"},
         {"key_exprs", to_key_exprs(services_reply_allow_, domain_id_)},
-      });
+    });
     rules.push_back(rule_allow_reply);
     policies_rules.push_back("incoming_queries");
 
-    json rule_outgoing_reply = json::object(
-      {
+    json rule_outgoing_reply = json::object({
         {"id", "outgoing_queryables_replies"},
         {"messages", json::array({"declare_queryable", "reply"})},
         {"flows", json::array({"egress"})},
         {"permission", "allow"},
         {"key_exprs", to_key_exprs(services_reply_allow_, domain_id_)},
-      });
+    });
     rules.push_back(rule_outgoing_reply);
     policies_rules.push_back("outgoing_queryables_replies");
   }
 
   if (!services_request_allow_.empty()) {
-    json rule_allow_request_out = json::object(
-      {
+    json rule_allow_request_out = json::object({
         {"id", "outgoing_queries"},
         {"messages", json::array({"query"})},
         {"flows", json::array({"egress"})},
         {"permission", "allow"},
         {"key_exprs", to_key_exprs(services_request_allow_, domain_id_)},
-      });
+    });
     rules.push_back(rule_allow_request_out);
     policies_rules.push_back("outgoing_queries");
 
-    json rule_allow_request_in = json::object(
-      {
+    json rule_allow_request_in = json::object({
         {"id", "incoming_queryables_replies"},
         {"messages", json::array({"declare_queryable", "reply"})},
         {"flows", json::array({"ingress"})},
         {"permission", "allow"},
         {"key_exprs", to_key_exprs(services_request_allow_, domain_id_)},
-      });
+    });
     rules.push_back(rule_allow_request_in);
     policies_rules.push_back("incoming_queryables_replies");
   }
 
   if (!topics_pub_allow_.empty()) {
-    json rule_allow_pub_out = json::object(
-      {
+    json rule_allow_pub_out = json::object({
         {"id", "outgoing_publications"},
         {"messages", json::array({"put"})},
         {"flows", json::array({"egress"})},
         {"permission", "allow"},
         {"key_exprs", to_key_exprs(topics_pub_allow_, domain_id_)},
-      });
+    });
     rules.push_back(rule_allow_pub_out);
     policies_rules.push_back("outgoing_publications");
 
-    json rule_allow_pub_in = json::object(
-      {
+    json rule_allow_pub_in = json::object({
         {"id", "incoming_subscriptions"},
         {"messages", json::array({"declare_subscriber"})},
         {"flows", json::array({"ingress"})},
         {"permission", "allow"},
         {"key_exprs", to_key_exprs(topics_pub_allow_, domain_id_)},
-      });
+    });
     rules.push_back(rule_allow_pub_in);
     policies_rules.push_back("incoming_subscriptions");
   }
 
   if (!topics_sub_allow_.empty()) {
-    json rule_allow_sub_out = json::object(
-      {
+    json rule_allow_sub_out = json::object({
         {"id", "outgoing_subscriptions"},
         {"messages", json::array({"declare_subscriber"})},
         {"flows", json::array({"egress"})},
         {"permission", "allow"},
         {"key_exprs", to_key_exprs(topics_sub_allow_, domain_id_)},
-      });
+    });
     rules.push_back(rule_allow_sub_out);
     policies_rules.push_back("outgoing_subscriptions");
 
-    json rule_allow_sub_in = json::object(
-      {
+    json rule_allow_sub_in = json::object({
         {"id", "incoming_publications"},
         {"messages", json::array({"put"})},
         {"flows", json::array({"ingress"})},
         {"permission", "allow"},
         {"key_exprs", to_key_exprs(topics_sub_allow_, domain_id_)},
-      });
+    });
     rules.push_back(rule_allow_sub_in);
     policies_rules.push_back("incoming_publications");
   }
 
-  json liveliness_messages = json::array(
-    {
+  json liveliness_messages = json::array({
       "liveliness_token", "liveliness_query", "declare_liveliness_subscriber"});
   if (!services_reply_allow_.empty() || !services_request_allow_.empty()) {
     liveliness_messages.push_back("reply");
   }
 
-  json rule_liveliness = json::object(
-    {
+  json rule_liveliness = json::object({
       {"id", "liveliness_tokens"},
       {"messages", liveliness_messages},
       {"flows", json::array({"ingress", "egress"})},
       {"permission", "allow"},
       {"key_exprs",
         json::array({"@ros2_lv/" + std::to_string(domain_id_) + "/**"})},
-    });
+  });
   rules.push_back(rule_liveliness);
   policies_rules.push_back("liveliness_tokens");
 
   json policies = json::array();
-  policies.push_back(
-    json::object(
-    {
+  policies.push_back(json::object({
       {"rules", json::array({"liveliness_tokens"})},
       {"subjects", json::array({"router"})},
-    }));
-  policies.push_back(
-    json::object(
-    {
+  }));
+  policies.push_back(json::object({
       {"rules", policies_rules},
       {"subjects", json::array({node_name})},
-    }));
+  }));
 
-  json subjects = json::array(
-    {
+  json subjects = json::array({
       json::object({{"id", "router"}}),
       json::object({{"id", node_name}}),
-    });
+  });
 
   config.insert_json5("access_control/enabled", "true");
   config.insert_json5("access_control/default_permission", "'deny'");
@@ -372,10 +355,24 @@ void ConfigGenerator::fill_certificates(
     return;
   }
 
-  // Access the certificates using utility function from rmw_dds_common.
-  std::unordered_map<std::string, std::string> security_files;
-  if (!rmw_dds_common::get_security_files(
-      std::string(""), enclave_dir.string(), security_files))
+  // Access the certificates using utility function from rmw_security_common.
+  rcutils_allocator_t allocator = rcutils_get_default_allocator();
+  rcutils_string_map_t security_files = rcutils_get_zero_initialized_string_map();
+  rcutils_ret_t ret = rcutils_string_map_init(&security_files, 0, allocator);
+  auto scope_exit = rcpputils::make_scope_exit(
+    [&security_files]() {
+      rcutils_ret_t ret = rcutils_string_map_fini(&security_files);
+      if (ret != RMW_RET_OK) {
+        std::cerr << "Failed to fini string map for security." << std::endl;
+        return;
+      }
+  });
+  if (ret != RMW_RET_OK) {
+    std::cerr << "Failed to initialize string map for security." << std::endl;
+    return;
+  }
+  if (get_security_files_support_pkcs(
+      false, "", enclave_dir.string().c_str(), &security_files) != RMW_RET_OK)
   {
     std::cerr << "Failed to get certificates for " << node_name << " from" <<
       enclave_dir.string().c_str() << std::endl;
@@ -391,11 +388,16 @@ void ConfigGenerator::fill_certificates(
           {"tls", {
               {"enable_mtls", true},
               {"verify_name_on_connect", false},
-              {"root_ca_certificate", security_files["IDENTITY_CA"]},
-              {"listen_private_key", security_files["PRIVATE_KEY"]},
-              {"listen_certificate", security_files["CERTIFICATE"]},
-              {"connect_private_key", security_files["PRIVATE_KEY"]},
-              {"connect_certificate", security_files["CERTIFICATE"]}
+              {"root_ca_certificate",
+                std::string(rcutils_string_map_get(&security_files, "IDENTITY_CA"))},
+              {"listen_private_key",
+                std::string(rcutils_string_map_get(&security_files, "PRIVATE_KEY"))},
+              {"listen_certificate",
+                std::string(rcutils_string_map_get(&security_files, "CERTIFICATE"))},
+              {"connect_private_key",
+                std::string(rcutils_string_map_get(&security_files, "PRIVATE_KEY"))},
+              {"connect_certificate",
+                std::string(rcutils_string_map_get(&security_files, "CERTIFICATE"))}
             }}
         }}
     };
@@ -451,9 +453,8 @@ void ConfigGenerator::parse_topics(
         }
 
         if (permission_s == nullptr) {
-          throw std::runtime_error(
-                  "Not able to get permission from service " +
-                  std::to_string(topics_node->GetLineNum()));
+          throw std::runtime_error("Not able to get permission from service " +
+            std::to_string(topics_node->GetLineNum()));
         }
         std::string permission = permission_s;
 
@@ -507,9 +508,8 @@ void ConfigGenerator::parse_profiles(const tinyxml2::XMLElement * root)
               }
 
               zenoh::ZResult result;
-              zenoh::Config config = zenoh::Config::from_file(
-                zenoh_session_config_filepath_,
-                &result);
+              zenoh::Config config = zenoh::Config::from_file(zenoh_session_config_filepath_,
+                  &result);
               if (result != Z_OK) {
                 std::string error_msg = "Invalid configuration file " +
                   zenoh_session_config_filepath_;

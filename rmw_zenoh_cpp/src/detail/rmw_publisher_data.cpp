@@ -67,12 +67,27 @@ std::shared_ptr<PublisherData> PublisherData::make(
     return nullptr;
   }
 
+  rcutils_allocator_t * allocator = &node->context->options.allocator;
+
+  const rosidl_type_hash_t * type_hash = type_support->get_type_hash_func(type_support);
   auto callbacks = static_cast<const message_type_support_callbacks_t *>(type_support->data);
   auto message_type_support = std::make_unique<MessageTypeSupport>(callbacks);
 
-  // Humble doesn't support type hash, but we leave it in place as a constant so we don't have to
-  // change the graph and liveliness token code.
-  const char * type_hash_c_str = "TypeHashNotSupported";
+  // Convert the type hash to a string so that it can be included in
+  // the keyexpr.
+  char * type_hash_c_str = nullptr;
+  rcutils_ret_t stringify_ret = rosidl_stringify_type_hash(
+    type_hash,
+    *allocator,
+    &type_hash_c_str);
+  if (RCUTILS_RET_BAD_ALLOC == stringify_ret) {
+    // rosidl_stringify_type_hash already set the error
+    return nullptr;
+  }
+  auto always_free_type_hash_c_str = rcpputils::make_scope_exit(
+    [&allocator, &type_hash_c_str]() {
+      allocator->deallocate(type_hash_c_str, allocator->state);
+    });
 
   std::size_t domain_id = node_info.domain_id_;
   auto entity = liveliness::Entity::make(
@@ -207,7 +222,7 @@ rmw_ret_t PublisherData::publish(
     type_support_impl_);
 
   // To store serialized message byte array.
-  char * msg_bytes = nullptr;
+  uint8_t * msg_bytes = nullptr;
 
   rcutils_allocator_t * allocator = &rmw_node_->context->options.allocator;
 
@@ -219,12 +234,12 @@ rmw_ret_t PublisherData::publish(
     });
 
   // Get memory from the allocator.
-  msg_bytes = static_cast<char *>(allocator->allocate(max_data_length, allocator->state));
+  msg_bytes = static_cast<uint8_t *>(allocator->allocate(max_data_length, allocator->state));
   RMW_CHECK_FOR_NULL_WITH_MSG(
     msg_bytes, "bytes for message is null", return RMW_RET_BAD_ALLOC);
 
   // Object that manages the raw buffer
-  eprosima::fastcdr::FastBuffer fastbuffer(msg_bytes, max_data_length);
+  eprosima::fastcdr::FastBuffer fastbuffer(reinterpret_cast<char *>(msg_bytes), max_data_length);
 
   // Object that serializes the data
   rmw_zenoh_cpp::Cdr ser(fastbuffer);
@@ -249,13 +264,17 @@ rmw_ret_t PublisherData::publish(
     sequence_number_++, source_timestamp, entity_->copy_gid()).serialize_to_zbytes();
 
   // TODO(ahcorde): shmbuf
-  std::vector<uint8_t> raw_data(
-    reinterpret_cast<const uint8_t *>(msg_bytes),
-    reinterpret_cast<const uint8_t *>(msg_bytes) + data_length);
-  zenoh::Bytes payload(std::move(raw_data));
+  auto deleter = [msg_bytes, allocator](uint8_t *) {
+      if (msg_bytes) {
+        allocator->deallocate(msg_bytes, allocator->state);
+      }
+    };
+  zenoh::Bytes payload(msg_bytes, data_length, deleter);
+  // The delete responsibility has been handed over to zenoh::Bytes now
+  always_free_msg_bytes.cancel();
 
-  TRACEPOINT(
-    rmw_publish, ros_message);
+  TRACETOOLS_TRACEPOINT(
+    rmw_publish, static_cast<const void *>(rmw_publisher_), ros_message, source_timestamp);
   pub_.put(std::move(payload), std::move(opts), &result);
   if (result != Z_OK) {
     if (result == Z_ESESSION_CLOSED) {
@@ -301,6 +320,8 @@ rmw_ret_t PublisherData::publish_serialized_message(
     serialized_message->buffer + data_length);
   zenoh::Bytes payload(std::move(raw_data));
 
+  TRACETOOLS_TRACEPOINT(
+    rmw_publish, static_cast<const void *>(rmw_publisher_), serialized_message, source_timestamp);
   pub_.put(std::move(payload), std::move(opts), &result);
   if (result != Z_OK) {
     if (result == Z_ESESSION_CLOSED) {
@@ -329,7 +350,7 @@ liveliness::TopicInfo PublisherData::topic_info() const
   return entity_->topic_info().value();
 }
 
-std::array<uint8_t, 16> PublisherData::copy_gid() const
+std::array<uint8_t, RMW_GID_STORAGE_SIZE> PublisherData::copy_gid() const
 {
   std::lock_guard<std::mutex> lock(mutex_);
   return entity_->copy_gid();

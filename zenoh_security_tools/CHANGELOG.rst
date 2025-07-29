@@ -2,15 +2,25 @@
 Changelog for package zenoh_security_tools
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-0.1.4 (2025-07-11)
+0.8.2 (2025-07-29)
 ------------------
 
-0.1.3 (2025-06-26)
+0.8.1 (2025-07-01)
 ------------------
-* Fixed zenoh_security_tools build (`#681 <https://github.com/ros2/rmw_zenoh/issues/681>`_)
-* Contributors: Alejandro Hernández Cordero
 
-0.1.2 (2025-06-19)
+0.8.0 (2025-06-18)
 ------------------
-* [backport jazzy] Add zenoh_security_tools (backport `#661 <https://github.com/ros2/rmw_zenoh/issues/661>`_) (`#673 <https://github.com/ros2/rmw_zenoh/issues/673>`_)
-* Contributors: mergify[bot]
+
+0.7.1 (2025-05-19)
+------------------
+* Update CMakeLists.txt (`#617 <https://github.com/ros2/rmw_zenoh/issues/617>`_)
+* Fix warning on Windows (`#615 <https://github.com/ros2/rmw_zenoh/issues/615>`_)
+* Contributors: Alejandro Hernández Cordero, mosfet80
+
+0.7.0 (2025-04-24)
+------------------
+
+0.6.0 (2025-04-18)
+------------------
+* Add zenoh_security_tools (`#595 <https://github.com/ros2/rmw_zenoh/issues/595>`_)
+* Contributors: yadunund
