@@ -80,7 +80,7 @@ std::shared_ptr<ServiceData> ServiceData::make(
   // We remove the suffix when appending the type to the liveliness tokens for
   // better reusability within GraphCache.
   std::string service_type = response_type_support->get_name();
-  size_t suffix_substring_position = service_type.find("Response_");
+  size_t suffix_substring_position = service_type.rfind("Response_");
   if (std::string::npos != suffix_substring_position) {
     service_type = service_type.substr(0, suffix_substring_position);
   } else {
@@ -533,7 +533,7 @@ rmw_ret_t ServiceData::shutdown()
     if (result != Z_OK) {
       RMW_ZENOH_LOG_ERROR_NAMED(
         "rmw_zenoh_cpp",
-        "Unable to undeclare liveliness token");
+        "Unable to undeclare the liveliness token");
       return RMW_RET_ERROR;
     }
 
@@ -541,7 +541,7 @@ rmw_ret_t ServiceData::shutdown()
     if (result != Z_OK) {
       RMW_ZENOH_LOG_ERROR_NAMED(
         "rmw_zenoh_cpp",
-        "Unable to undeclare queryable");
+        "Unable to undeclare the queryable");
       return RMW_RET_ERROR;
     }
   }
