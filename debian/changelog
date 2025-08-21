@@ -1,0 +1,84 @@
+ros-humble-rmw-zenoh-cpp (0.1.5-1jammy) jammy; urgency=high
+
+  * fixing typo flow to flows in config files (#747 <https://github.com/ros2/rmw_zenoh/issues/747>)
+  * Shared Memory on C++ API (#743 <https://github.com/ros2/rmw_zenoh/issues/743>)
+  * Bump Zenoh to v1.5.0 (#737 <https://github.com/ros2/rmw_zenoh/issues/737>)
+  * rmw_zenoh_cpp: Include algorithm for std::find_if (#727 <https://github.com/ros2/rmw_zenoh/issues/727>)
+  * Use rfind to avoid issues with service types ending in Request or Response (#722 <https://github.com/ros2/rmw_zenoh/issues/722>)
+  * Remove the extra copy on the publisher side (#714 <https://github.com/ros2/rmw_zenoh/issues/714>)
+  * Contributors: ChenYing Kuo (CY), Christophe Bedard, Faseel Chemmadan, Filip, Jan Vermaete, Julien Enoch, milidam, Steven Palma, Yadunund, yellowhatter, Yuyuan Yuan
+
+ -- Yadunund <yadunund@openrobotics.org>  Thu, 21 Aug 2025 00:00:00 -0000
+
+ros-humble-rmw-zenoh-cpp (0.1.4-1jammy) jammy; urgency=high
+
+  * Avoid ambiguity with variable shadowing (#706 <https://github.com/ros2/rmw_zenoh/issues/706>) (#709 <https://github.com/ros2/rmw_zenoh/issues/709>)
+  * Only configure the timeout of the action-related service get_result to maximum value. (#685 <https://github.com/ros2/rmw_zenoh/issues/685>) (#703 <https://github.com/ros2/rmw_zenoh/issues/703>)
+  * Use Zenoh Querier to replace Session.get (#694 <https://github.com/ros2/rmw_zenoh/issues/694>) (#699 <https://github.com/ros2/rmw_zenoh/issues/699>)
+  * Contributors: ChenYing Kuo (CY), Yadunund
+
+ -- Yadunund <yadunund@openrobotics.org>  Fri, 11 Jul 2025 00:00:00 -0000
+
+ros-humble-rmw-zenoh-cpp (0.1.3-1jammy) jammy; urgency=high
+
+
+
+ -- Yadunund <yadunund@openrobotics.org>  Thu, 26 Jun 2025 00:00:00 -0000
+
+ros-humble-rmw-zenoh-cpp (0.1.2-1jammy) jammy; urgency=high
+
+  * Use data() to avoid potentially dereferencing an empty vector (#667 <https://github.com/ros2/rmw_zenoh/issues/667>) (#670 <https://github.com/ros2/rmw_zenoh/issues/670>)
+  * Bump Zenoh to 1.4.0 (#652 <https://github.com/ros2/rmw_zenoh/issues/652>) (#659 <https://github.com/ros2/rmw_zenoh/issues/659>)
+  * fix(comment): correct the QoS incompatibilities (#644 <https://github.com/ros2/rmw_zenoh/issues/644>) (#647 <https://github.com/ros2/rmw_zenoh/issues/647>)
+  * Change serialization format in attachment_helpers.cpp (backport #601 <https://github.com/ros2/rmw_zenoh/issues/601>) (#606 <https://github.com/ros2/rmw_zenoh/issues/606>)
+  * Fix the comment. (#597 <https://github.com/ros2/rmw_zenoh/issues/597>) (#599 <https://github.com/ros2/rmw_zenoh/issues/599>)
+  * Bump Zenoh to v1.3.2 and improve e2e reliability with HeartbeatSporadic (#591 <https://github.com/ros2/rmw_zenoh/issues/591>) (#594 <https://github.com/ros2/rmw_zenoh/issues/594>)
+  * Trigger qos event callback if there are changes before registration  (backport #587 <https://github.com/ros2/rmw_zenoh/issues/587>) (#590 <https://github.com/ros2/rmw_zenoh/issues/590>)
+  * Set wait_set->triggered flag to false (#575 <https://github.com/ros2/rmw_zenoh/issues/575>) (#585 <https://github.com/ros2/rmw_zenoh/issues/585>)
+  * Add space after id token in rmw_zenohd log string (#576 <https://github.com/ros2/rmw_zenoh/issues/576>) (#579 <https://github.com/ros2/rmw_zenoh/issues/579>)
+  * fix: use std::unique_lock to unlock correctly on Windows (#570 <https://github.com/ros2/rmw_zenoh/issues/570>) (#574 <https://github.com/ros2/rmw_zenoh/issues/574>)
+  * Switch to std::map for TopicTypeMap (backport #546 <https://github.com/ros2/rmw_zenoh/issues/546>) (#566 <https://github.com/ros2/rmw_zenoh/issues/566>)
+  * feat: support zenoh config override (backport #551 <https://github.com/ros2/rmw_zenoh/issues/551>) (#560 <https://github.com/ros2/rmw_zenoh/issues/560>)
+  * Enable Zenoh UDP transport (#486 <https://github.com/ros2/rmw_zenoh/issues/486>) (#489 <https://github.com/ros2/rmw_zenoh/issues/489>)
+  * feat: introduce the advanced publisher and subscriber (backport #368 <https://github.com/ros2/rmw_zenoh/issues/368>) (#470 <https://github.com/ros2/rmw_zenoh/issues/470>)
+  * Backport #294 <https://github.com/ros2/rmw_zenoh/issues/294> to humble  (backport #471 <https://github.com/ros2/rmw_zenoh/issues/471>) (#472 <https://github.com/ros2/rmw_zenoh/issues/472>)
+  * Align the config with the latest Zenoh. (#556 <https://github.com/ros2/rmw_zenoh/issues/556>) (#558 <https://github.com/ros2/rmw_zenoh/issues/558>)
+  * Bump zenoh-cpp to 2a127bb, zenoh-c to 3540a3c, and zenoh to f735bf5 (#503 <https://github.com/ros2/rmw_zenoh/issues/503>) (#512 <https://github.com/ros2/rmw_zenoh/issues/512>)
+  * Added documentation note in the code (#540 <https://github.com/ros2/rmw_zenoh/issues/540>) (#542 <https://github.com/ros2/rmw_zenoh/issues/542>)
+  * fix: unlock the mutex before making get (#537 <https://github.com/ros2/rmw_zenoh/issues/537>) (#538 <https://github.com/ros2/rmw_zenoh/issues/538>)
+  * Take wait_set_lock before condition_variable notification for subscriptions (#528 <https://github.com/ros2/rmw_zenoh/issues/528>) (#535 <https://github.com/ros2/rmw_zenoh/issues/535>)
+  * Switch default durability to volatile (#521 <https://github.com/ros2/rmw_zenoh/issues/521>) (#531 <https://github.com/ros2/rmw_zenoh/issues/531>)
+  * Honor ignore_local_publications in subscription options (backport #508 <https://github.com/ros2/rmw_zenoh/issues/508>) (#514 <https://github.com/ros2/rmw_zenoh/issues/514>)
+  * Fixed windows warning (#500 <https://github.com/ros2/rmw_zenoh/issues/500>) (#519 <https://github.com/ros2/rmw_zenoh/issues/519>)
+  * Config: tune some values for ROS use case, especially with large number of Nodes (>200) (#509 <https://github.com/ros2/rmw_zenoh/issues/509>) (#516 <https://github.com/ros2/rmw_zenoh/issues/516>)
+  * Fix calculation of current_count_change when event status is updated (#504 <https://github.com/ros2/rmw_zenoh/issues/504>) (#507 <https://github.com/ros2/rmw_zenoh/issues/507>)
+  * fix: use the default destructor that automatically drops the zenoh reply/query and hence sends the final signal (#473 <https://github.com/ros2/rmw_zenoh/issues/473>) (#475 <https://github.com/ros2/rmw_zenoh/issues/475>)
+  * Switch to debug log if topic_name not in topic_map (#454 <https://github.com/ros2/rmw_zenoh/issues/454>) (#465 <https://github.com/ros2/rmw_zenoh/issues/465>)
+  * Bump Zenoh to commit id 3bbf6af (1.2.1 + few commits) (#456 <https://github.com/ros2/rmw_zenoh/issues/456>) (#462 <https://github.com/ros2/rmw_zenoh/issues/462>)
+  * Contributors: Alejandro Hernández Cordero, ChenYing Kuo (CY), Chris Lalancette, Christophe Bedard, G.A. vd. Hoorn, Julien Enoch, Luca Cominardi, Øystein Sture, Paul Bouchier, Yadunund, yellowhatter, Yuyuan Yuan
+
+ -- Yadunund <yadunund@openrobotics.org>  Thu, 19 Jun 2025 00:00:00 -0000
+
+ros-humble-rmw-zenoh-cpp (0.1.1-1jammy) jammy; urgency=high
+
+  * Bump Zenoh to commit id e4ea6f0 (1.2.0 + few commits) (#449 <https://github.com/ros2/rmw_zenoh/issues/449>)
+  * Inform users that peers will not discover and communicate with one another until the router is started (#445 <https://github.com/ros2/rmw_zenoh/issues/445>)
+  * Clear the error after rmw_serialized_message_resize() (#437 <https://github.com/ros2/rmw_zenoh/issues/437>)
+  * Fix ZENOH_ROUTER_CHECK_ATTEMPTS which was not respected (#429 <https://github.com/ros2/rmw_zenoh/issues/429>)
+  * fix: use the default destructor to drop the member Payload (#421 <https://github.com/ros2/rmw_zenoh/issues/421>)
+  * Remove gid_hash_ from AttachmentData (#418 <https://github.com/ros2/rmw_zenoh/issues/418>)
+  * Sync the config with the default config in Zenoh. (#414 <https://github.com/ros2/rmw_zenoh/issues/414>)
+  * fix: check the context validity before accessing the session (#407 <https://github.com/ros2/rmw_zenoh/issues/407>)
+  * Fix wan't typo (#402 <https://github.com/ros2/rmw_zenoh/issues/402>)
+  * Contributors: Alejandro Hernández Cordero, ChenYing Kuo (CY), Chris Lalancette, Julien Enoch, Mahmo Clephas, Yadunud, Mahmoud Mazouz, Timund, Yuyuan Yuan
+
+ -- Yadunund <yadunund@openrobotics.org>  Tue, 04 Feb 2025 00:00:00 -0000
+
+ros-humble-rmw-zenoh-cpp (0.1.0-1jammy) jammy; urgency=high
+
+  * An alternative middleware for ROS 2 based on Zenoh.
+  * Contributors: Alejandro Hernández Cordero, Alex Day, Bernd Pfrommer, ChenYing Kuo (CY), Chris Lalancette, Christophe Bedard, CihatAltiparmak, Esteve Fernandez, Franco Cipollone, Geoffrey Biggs, Hans-Martin, James Mount, Julien Enoch, Morgan Quigley, Nate Koenig, Shivang Vijay, Yadunund, Yuyuan Yuan, methylDragon
+
+ -- Yadunund <yadunund@openrobotics.org>  Thu, 02 Jan 2025 00:00:00 -0000
+
+
