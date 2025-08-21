@@ -2,6 +2,9 @@
 Changelog for package zenoh_security_tools
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.2.6 (2025-08-21)
+------------------
+
 0.2.5 (2025-06-18)
 ------------------
 * Add zenoh_security_tools (`#661 <https://github.com/ros2/rmw_zenoh/issues/661>`_)
