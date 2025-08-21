@@ -2,26 +2,17 @@
 Changelog for package zenoh_security_tools
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-0.9.0 (2025-08-21)
+0.6.3 (2025-08-21)
 ------------------
 
-0.8.2 (2025-07-29)
+0.6.2 (2025-06-18)
 ------------------
 
-0.8.1 (2025-07-01)
+0.6.1 (2025-05-20)
 ------------------
-
-0.8.0 (2025-06-18)
-------------------
-
-0.7.1 (2025-05-19)
-------------------
-* Update CMakeLists.txt (`#617 <https://github.com/ros2/rmw_zenoh/issues/617>`_)
-* Fix warning on Windows (`#615 <https://github.com/ros2/rmw_zenoh/issues/615>`_)
+* Update CMakeLists.txt (`#622 <https://github.com/ros2/rmw_zenoh/issues/622>`_)
+* Fix warning on Windows (`#618 <https://github.com/ros2/rmw_zenoh/issues/618>`_)
 * Contributors: Alejandro Hernández Cordero, mosfet80
-
-0.7.0 (2025-04-24)
-------------------
 
 0.6.0 (2025-04-18)
 ------------------
