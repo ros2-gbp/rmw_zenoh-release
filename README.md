@@ -1,3 +1,29 @@
+## rmw_zenoh (rolling) - 0.9.1-1
+
+The packages in the `rmw_zenoh` repository were released into the `rolling` distro by running `/usr/bin/bloom-release --rosdistro rolling --track rolling rmw_zenoh` on `Wed, 10 Sep 2025 10:28:22 -0000`
+
+These packages were released:
+- `rmw_zenoh_cpp`
+- `zenoh_cpp_vendor`
+- `zenoh_security_tools`
+
+Version of package(s) in repository `rmw_zenoh`:
+
+- upstream repository: https://github.com/ros2/rmw_zenoh.git
+- release repository: https://github.com/ros2-gbp/rmw_zenoh-release.git
+- rosdistro version: `0.9.0-1`
+- old version: `0.9.0-1`
+- new version: `0.9.1-1`
+
+Versions of tools used:
+
+- bloom version: `0.13.0`
+- catkin_pkg version: `1.0.0`
+- rosdep version: `0.26.0`
+- rosdistro version: `1.0.1`
+- vcstools version: `0.1.42`
+
+
 ## rmw_zenoh (humble) - 0.1.5-1
 
 The packages in the `rmw_zenoh` repository were released into the `humble` distro by running `/usr/bin/bloom-release -r humble rmw_zenoh -y` on `Thu, 21 Aug 2025 02:07:21 -0000`
