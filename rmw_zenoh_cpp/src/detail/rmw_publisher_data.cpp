@@ -70,27 +70,12 @@ std::shared_ptr<PublisherData> PublisherData::make(
     return nullptr;
   }
 
-  rcutils_allocator_t * allocator = &node->context->options.allocator;
-
-  const rosidl_type_hash_t * type_hash = type_support->get_type_hash_func(type_support);
   auto callbacks = static_cast<const message_type_support_callbacks_t *>(type_support->data);
   auto message_type_support = std::make_unique<MessageTypeSupport>(callbacks);
 
-  // Convert the type hash to a string so that it can be included in
-  // the keyexpr.
-  char * type_hash_c_str = nullptr;
-  rcutils_ret_t stringify_ret = rosidl_stringify_type_hash(
-    type_hash,
-    *allocator,
-    &type_hash_c_str);
-  if (RCUTILS_RET_BAD_ALLOC == stringify_ret) {
-    // rosidl_stringify_type_hash already set the error
-    return nullptr;
-  }
-  auto always_free_type_hash_c_str = rcpputils::make_scope_exit(
-    [&allocator, &type_hash_c_str]() {
-      allocator->deallocate(type_hash_c_str, allocator->state);
-    });
+  // Humble doesn't support type hash, but we leave it in place as a constant so we don't have to
+  // change the graph and liveliness token code.
+  const char * type_hash_c_str = "TypeHashNotSupported";
 
   std::size_t domain_id = node_info.domain_id_;
   auto entity = liveliness::Entity::make(
@@ -312,7 +297,7 @@ rmw_ret_t PublisherData::publish(
     payload = zenoh::Bytes(std::move(*shm_buf));
   } else if (pool_buf.has_value() && pool_buf.value().data) {
     auto deleter = [buffer_pool = context_impl->serialization_buffer_pool(),
-        buffer = pool_buf](uint8_t *){
+        buffer = pool_buf](uint8_t *) {
         buffer_pool->deallocate(buffer.value());
       };
     payload = zenoh::Bytes(msg_bytes, data_length, deleter);
@@ -325,8 +310,8 @@ rmw_ret_t PublisherData::publish(
   // The delete responsibility has been handed over to zenoh::Bytes now
   always_free_msg_bytes.cancel();
 
-  TRACETOOLS_TRACEPOINT(
-    rmw_publish, static_cast<const void *>(rmw_publisher_), ros_message, source_timestamp);
+  TRACEPOINT(
+    rmw_publish, ros_message);
   pub_.put(std::move(payload), std::move(opts), &result);
   if (result != Z_OK) {
     if (result == Z_ESESSION_CLOSED) {
@@ -379,9 +364,8 @@ rmw_ret_t PublisherData::publish_serialized_message(
       memcpy(msg_bytes, serialized_message->buffer, data_length);
       zenoh::Bytes payload(std::move(buf));
 
-      TRACETOOLS_TRACEPOINT(
-        rmw_publish, static_cast<const void *>(rmw_publisher_), serialized_message,
-        source_timestamp);
+      TRACEPOINT(
+        rmw_publish, serialized_message);
 
       pub_.put(std::move(payload), std::move(opts), &result);
     } else {
@@ -395,9 +379,8 @@ rmw_ret_t PublisherData::publish_serialized_message(
         serialized_message->buffer + data_length);
       zenoh::Bytes payload(raw_image);
 
-      TRACETOOLS_TRACEPOINT(
-        rmw_publish, static_cast<const void *>(rmw_publisher_), serialized_message,
-          source_timestamp);
+      TRACEPOINT(
+        rmw_publish, serialized_message);
 
       pub_.put(std::move(payload), std::move(opts), &result);
     }
@@ -407,8 +390,8 @@ rmw_ret_t PublisherData::publish_serialized_message(
       serialized_message->buffer + data_length);
     zenoh::Bytes payload(raw_image);
 
-    TRACETOOLS_TRACEPOINT(
-      rmw_publish, static_cast<const void *>(rmw_publisher_), serialized_message, source_timestamp);
+    TRACEPOINT(
+      rmw_publish, serialized_message);
 
     pub_.put(std::move(payload), std::move(opts), &result);
   }
@@ -440,7 +423,7 @@ liveliness::TopicInfo PublisherData::topic_info() const
   return entity_->topic_info().value();
 }
 
-std::array<uint8_t, RMW_GID_STORAGE_SIZE> PublisherData::copy_gid() const
+std::array<uint8_t, 16> PublisherData::copy_gid() const
 {
   std::lock_guard<std::mutex> lock(mutex_);
   return entity_->copy_gid();
