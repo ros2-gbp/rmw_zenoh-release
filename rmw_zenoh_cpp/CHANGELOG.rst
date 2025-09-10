@@ -2,48 +2,37 @@
 Changelog for package rmw_zenoh_cpp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-0.9.1 (2025-09-10)
+0.6.4 (2025-09-10)
 ------------------
-* Recycle serialization buffers on transmission (`#342 <https://github.com/ros2/rmw_zenoh/issues/342>`_)
-* refactor: avoid redundant key expression creation when replying (`#732 <https://github.com/ros2/rmw_zenoh/issues/732>`_)
+* Recycle serialization buffers on transmission (`#766 <https://github.com/ros2/rmw_zenoh/issues/766>`_)
+* refactor: avoid redundant key expression creation when replying (`#754 <https://github.com/ros2/rmw_zenoh/issues/754>`_)
 * Contributors: Chris Lalancette, Yadunund, Mahmoud Mazouz, Yuyuan Yuan, Julien Enoch
 
-0.9.0 (2025-08-21)
+0.6.3 (2025-08-21)
 ------------------
-* Do not include rosidl_typesupport\_{c,cpp} in rmw impl typesupport list (`#748 <https://github.com/ros2/rmw_zenoh/issues/748>`_)
-* fixing typo flow to flows in config files (`#740 <https://github.com/ros2/rmw_zenoh/issues/740>`_)
-* Shared Memory on C++ API (`#363 <https://github.com/ros2/rmw_zenoh/issues/363>`_)
-* Bump Zenoh to v1.5.0 (`#728 <https://github.com/ros2/rmw_zenoh/issues/728>`_)
-* Contributors: ChenYing Kuo (CY), Christophe Bedard, Faseel Chemmadan, Julien Enoch, milidam, Steven Palma, Yadunund, yellowhatter, Yuyuan Yuan
+* fixing typo flow to flows in config files (`#745 <https://github.com/ros2/rmw_zenoh/issues/745>`_)
+* Shared Memory on C++ API (`#741 <https://github.com/ros2/rmw_zenoh/issues/741>`_)
+* Bump Zenoh to v1.5.0 (`#735 <https://github.com/ros2/rmw_zenoh/issues/735>`_)
+* rmw_zenoh_cpp: Include algorithm for std::find_if (`#725 <https://github.com/ros2/rmw_zenoh/issues/725>`_)
+* Use rfind to avoid issues with service types ending in Request or Response (`#720 <https://github.com/ros2/rmw_zenoh/issues/720>`_)
+* Remove the extra copy on the publisher side (`#712 <https://github.com/ros2/rmw_zenoh/issues/712>`_)
+* Avoid ambiguity with variable shadowing (`#707 <https://github.com/ros2/rmw_zenoh/issues/707>`_)
+* Only configure the timeout of the action-related service `get_result` to maximum value. (`#701 <https://github.com/ros2/rmw_zenoh/issues/701>`_)
+* Use Zenoh Querier to replace Session.get (`#697 <https://github.com/ros2/rmw_zenoh/issues/697>`_)
+* Contributors: ChenYing Kuo (CY), Christophe Bedard, Faseel Chemmadan, Filip, Jan Vermaete, Julien Enoch, milidam, Steven Palma, Yadunund, yellowhatter, Yuyuan Yuan
 
-0.8.2 (2025-07-29)
+0.6.2 (2025-06-18)
 ------------------
-* rmw_zenoh_cpp: Include algorithm for std::find_if (`#723 <https://github.com/ros2/rmw_zenoh/issues/723>`_)
-* Use rfind to avoid issues with service types ending in Request or Response (`#719 <https://github.com/ros2/rmw_zenoh/issues/719>`_)
-* Remove the extra copy on the publisher side (`#711 <https://github.com/ros2/rmw_zenoh/issues/711>`_)
-* Avoid ambiguity with variable shadowing (`#706 <https://github.com/ros2/rmw_zenoh/issues/706>`_)
-* Only configure the timeout of the action-related service `get_result` to maximum value. (`#685 <https://github.com/ros2/rmw_zenoh/issues/685>`_)
-* Use Zenoh Querier to replace Session.get (`#694 <https://github.com/ros2/rmw_zenoh/issues/694>`_)
-* Contributors: ChenYing Kuo (CY), Filip, Jan Vermaete, yadunund
-
-0.8.1 (2025-07-01)
-------------------
-
-0.8.0 (2025-06-18)
-------------------
-* Use data() to avoid potentially dereferencing an empty vector (`#667 <https://github.com/ros2/rmw_zenoh/issues/667>`_)
-* Bump Zenoh to 1.4.0 (`#652 <https://github.com/ros2/rmw_zenoh/issues/652>`_)
+* Use data() to avoid potentially dereferencing an empty vector (`#668 <https://github.com/ros2/rmw_zenoh/issues/668>`_)
+* Bump Zenoh to 1.4.0 (`#657 <https://github.com/ros2/rmw_zenoh/issues/657>`_)
 * Contributors: Julien Enoch, Øystein Sture
 
-0.7.1 (2025-05-19)
+0.6.1 (2025-05-20)
 ------------------
-* fix(comment): correct the QoS incompatibilities (`#644 <https://github.com/ros2/rmw_zenoh/issues/644>`_)
-* fix rmw_take_serialized_message. (`#638 <https://github.com/ros2/rmw_zenoh/issues/638>`_)
-* Update CMakeLists.txt (`#617 <https://github.com/ros2/rmw_zenoh/issues/617>`_)
-* Contributors: Alejandro Hernández Cordero, Tomoya Fujita, Yuyuan Yuan, mosfet80
-
-0.7.0 (2025-04-24)
-------------------
+* fix(comment): correct the QoS incompatibilities (`#645 <https://github.com/ros2/rmw_zenoh/issues/645>`_)
+* fix rmw_take_serialized_message. (`#639 <https://github.com/ros2/rmw_zenoh/issues/639>`_)
+* Update CMakeLists.txt (`#622 <https://github.com/ros2/rmw_zenoh/issues/622>`_)
+* Contributors: Alejandro Hernández Cordero, mosfet80, Tomoya Fujita
 
 0.6.0 (2025-04-18)
 ------------------
