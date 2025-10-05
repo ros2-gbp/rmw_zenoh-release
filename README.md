@@ -1,3 +1,29 @@
+## rmw_zenoh (humble) - 0.1.7-1
+
+The packages in the `rmw_zenoh` repository were released into the `humble` distro by running `/usr/bin/bloom-release -r humble rmw_zenoh -y` on `Sun, 05 Oct 2025 07:23:53 -0000`
+
+These packages were released:
+- `rmw_zenoh_cpp`
+- `zenoh_cpp_vendor`
+- `zenoh_security_tools`
+
+Version of package(s) in repository `rmw_zenoh`:
+
+- upstream repository: https://github.com/ros2/rmw_zenoh.git
+- release repository: https://github.com/ros2-gbp/rmw_zenoh-release.git
+- rosdistro version: `0.1.6-1`
+- old version: `0.1.6-1`
+- new version: `0.1.7-1`
+
+Versions of tools used:
+
+- bloom version: `0.13.0`
+- catkin_pkg version: `1.1.0`
+- rosdep version: `0.26.0`
+- rosdistro version: `1.0.1`
+- vcstools version: `0.1.42`
+
+
 ## rmw_zenoh (jazzy) - 0.2.8-1
 
 The packages in the `rmw_zenoh` repository were released into the `jazzy` distro by running `/usr/bin/bloom-release -r jazzy rmw_zenoh` on `Sun, 05 Oct 2025 07:14:46 -0000`
