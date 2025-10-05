@@ -66,9 +66,6 @@ std::shared_ptr<ClientData> ClientData::make(
     return nullptr;
   }
 
-  rcutils_allocator_t * allocator = &node->context->options.allocator;
-
-  const rosidl_type_hash_t * type_hash = type_support->get_type_hash_func(type_support);
   auto service_members = static_cast<const service_type_support_callbacks_t *>(type_support->data);
   auto request_members = static_cast<const message_type_support_callbacks_t *>(
     service_members->request_members_->data);
@@ -92,20 +89,9 @@ std::shared_ptr<ClientData> ClientData::make(
     return nullptr;
   }
 
-  // Convert the type hash to a string so that it can be included in the keyexpr.
-  char * type_hash_c_str = nullptr;
-  rcutils_ret_t stringify_ret = rosidl_stringify_type_hash(
-    type_hash,
-    *allocator,
-    &type_hash_c_str);
-  if (RCUTILS_RET_BAD_ALLOC == stringify_ret) {
-    // rosidl_stringify_type_hash already set the error
-    return nullptr;
-  }
-  auto free_type_hash_c_str = rcpputils::make_scope_exit(
-    [&allocator, &type_hash_c_str]() {
-      allocator->deallocate(type_hash_c_str, allocator->state);
-    });
+  // Humble doesn't support type hash, but we leave it in place as a constant so we don't have to
+  // change the graph and liveliness token code.
+  const char * type_hash_c_str = "TypeHashNotSupported";
 
   std::size_t domain_id = node_info.domain_id_;
   auto entity = liveliness::Entity::make(
@@ -223,7 +209,7 @@ bool ClientData::liveliness_is_valid() const
 }
 
 ///=============================================================================
-std::array<uint8_t, RMW_GID_STORAGE_SIZE> ClientData::copy_gid() const
+std::array<uint8_t, 16> ClientData::copy_gid() const
 {
   return entity_->copy_gid();
 }
@@ -327,7 +313,7 @@ rmw_ret_t ClientData::take_response(
   memcpy(
     request_header->request_id.writer_guid,
     attachment.copy_gid().data(),
-    RMW_GID_STORAGE_SIZE);
+    16);
   request_header->received_timestamp = latest_reply->get_received_timestamp();
 
   *taken = true;
