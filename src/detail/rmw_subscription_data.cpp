@@ -161,6 +161,7 @@ bool SubscriptionData::init()
   sess_ = context_impl->session();
 
   using AdvancedSubscriberOptions = zenoh::ext::SessionExt::AdvancedSubscriberOptions;
+  using RecoveryOptions = AdvancedSubscriberOptions::RecoveryOptions;
   auto adv_sub_opts = AdvancedSubscriberOptions::create_default();
 
   // Instantiate the subscription with suitable options depending on the
@@ -178,8 +179,8 @@ bool SubscriptionData::init()
       // Activate recovery of lost samples.
       // This requires the Publisher to have sample_miss_detection configured,
       // which is the case for a RELIABLE + TRANSIENT_LOCAL Publisher.
-      adv_sub_opts.recovery.emplace().last_sample_miss_detection =
-        AdvancedSubscriberOptions::RecoveryOptions::Heartbeat{};
+      adv_sub_opts.recovery = AdvancedSubscriberOptions::RecoveryOptions{};
+      adv_sub_opts.recovery->last_sample_miss_detection = RecoveryOptions::Heartbeat{};
     }
   }
 
@@ -198,7 +199,8 @@ bool SubscriptionData::init()
       if (!attachment.has_value()) {
         RMW_ZENOH_LOG_ERROR_NAMED(
           "rmw_zenoh_cpp",
-          "Unable to obtain attachment")
+          "Unable to obtain attachment for topic '%s'",
+          std::string(sample.get_keyexpr().as_string_view()).c_str())
         return;
       }
       auto attachment_value = attachment.value();
@@ -302,7 +304,8 @@ rmw_ret_t SubscriptionData::shutdown()
   if (result != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
-      "Unable to undeclare the liveliness token");
+      "Unable to undeclare the liveliness token for topic '%s'",
+      entity_->topic_info().value().name_.c_str());
     return RMW_RET_ERROR;
   }
 
@@ -311,7 +314,8 @@ rmw_ret_t SubscriptionData::shutdown()
     if (result != Z_OK) {
       RMW_ZENOH_LOG_ERROR_NAMED(
         "rmw_zenoh_cpp",
-        "Unable to undeclare the subscriber.");
+        "Unable to undeclare the subscriber for topic '%s'",
+        entity_->topic_info().value().name_.c_str());
       return RMW_RET_ERROR;
     }
   }
