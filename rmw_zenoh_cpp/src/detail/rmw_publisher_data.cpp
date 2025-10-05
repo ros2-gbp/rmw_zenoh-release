@@ -70,12 +70,27 @@ std::shared_ptr<PublisherData> PublisherData::make(
     return nullptr;
   }
 
+  rcutils_allocator_t * allocator = &node->context->options.allocator;
+
+  const rosidl_type_hash_t * type_hash = type_support->get_type_hash_func(type_support);
   auto callbacks = static_cast<const message_type_support_callbacks_t *>(type_support->data);
   auto message_type_support = std::make_unique<MessageTypeSupport>(callbacks);
 
-  // Humble doesn't support type hash, but we leave it in place as a constant so we don't have to
-  // change the graph and liveliness token code.
-  const char * type_hash_c_str = "TypeHashNotSupported";
+  // Convert the type hash to a string so that it can be included in
+  // the keyexpr.
+  char * type_hash_c_str = nullptr;
+  rcutils_ret_t stringify_ret = rosidl_stringify_type_hash(
+    type_hash,
+    *allocator,
+    &type_hash_c_str);
+  if (RCUTILS_RET_BAD_ALLOC == stringify_ret) {
+    // rosidl_stringify_type_hash already set the error
+    return nullptr;
+  }
+  auto always_free_type_hash_c_str = rcpputils::make_scope_exit(
+    [&allocator, &type_hash_c_str]() {
+      allocator->deallocate(type_hash_c_str, allocator->state);
+    });
 
   std::size_t domain_id = node_info.domain_id_;
   auto entity = liveliness::Entity::make(
@@ -100,6 +115,7 @@ std::shared_ptr<PublisherData> PublisherData::make(
   }
 
   using AdvancedPublisherOptions = zenoh::ext::SessionExt::AdvancedPublisherOptions;
+  using SampleMissDetectionOptions = AdvancedPublisherOptions::SampleMissDetectionOptions;
   auto adv_pub_opts = AdvancedPublisherOptions::create_default();
 
   if (adapted_qos_profile.durability == RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL) {
@@ -111,8 +127,9 @@ std::shared_ptr<PublisherData> PublisherData::make(
       // If RELIABLE + TRANSIENT_LOCAL activate sample miss detection for subscriber
       // to detect missed samples and retrieve those from the Publisher cache.
       // HeartbeatSporadic is used to prevent excessive background traffic
-      adv_pub_opts.sample_miss_detection.emplace().heartbeat =
-        AdvancedPublisherOptions::SampleMissDetectionOptions::HeartbeatSporadic{
+      adv_pub_opts.sample_miss_detection = SampleMissDetectionOptions{};
+      adv_pub_opts.sample_miss_detection->heartbeat =
+        SampleMissDetectionOptions::HeartbeatSporadic{
         SAMPLE_MISS_DETECTION_HEARTBEAT_PERIOD};
     }
   }
@@ -297,21 +314,21 @@ rmw_ret_t PublisherData::publish(
     payload = zenoh::Bytes(std::move(*shm_buf));
   } else if (pool_buf.has_value() && pool_buf.value().data) {
     auto deleter = [buffer_pool = context_impl->serialization_buffer_pool(),
-        buffer = pool_buf](uint8_t *) {
+        buffer = pool_buf](uint8_t *){
         buffer_pool->deallocate(buffer.value());
       };
     payload = zenoh::Bytes(msg_bytes, data_length, deleter);
   } else {
-    std::vector<uint8_t> raw_data(
-      reinterpret_cast<const uint8_t *>(msg_bytes),
-      reinterpret_cast<const uint8_t *>(msg_bytes) + data_length);
-    payload = zenoh::Bytes(std::move(raw_data));
+    auto deleter = [msg_bytes, allocator](uint8_t *) {
+        allocator->deallocate(msg_bytes, allocator->state);
+      };
+    payload = zenoh::Bytes(msg_bytes, data_length, deleter);
   }
   // The delete responsibility has been handed over to zenoh::Bytes now
   always_free_msg_bytes.cancel();
 
-  TRACEPOINT(
-    rmw_publish, ros_message);
+  TRACETOOLS_TRACEPOINT(
+    rmw_publish, static_cast<const void *>(rmw_publisher_), ros_message, source_timestamp);
   pub_.put(std::move(payload), std::move(opts), &result);
   if (result != Z_OK) {
     if (result == Z_ESESSION_CLOSED) {
@@ -364,8 +381,9 @@ rmw_ret_t PublisherData::publish_serialized_message(
       memcpy(msg_bytes, serialized_message->buffer, data_length);
       zenoh::Bytes payload(std::move(buf));
 
-      TRACEPOINT(
-        rmw_publish, serialized_message);
+      TRACETOOLS_TRACEPOINT(
+        rmw_publish, static_cast<const void *>(rmw_publisher_), serialized_message,
+        source_timestamp);
 
       pub_.put(std::move(payload), std::move(opts), &result);
     } else {
@@ -379,8 +397,9 @@ rmw_ret_t PublisherData::publish_serialized_message(
         serialized_message->buffer + data_length);
       zenoh::Bytes payload(raw_image);
 
-      TRACEPOINT(
-        rmw_publish, serialized_message);
+      TRACETOOLS_TRACEPOINT(
+        rmw_publish, static_cast<const void *>(rmw_publisher_), serialized_message,
+          source_timestamp);
 
       pub_.put(std::move(payload), std::move(opts), &result);
     }
@@ -390,8 +409,8 @@ rmw_ret_t PublisherData::publish_serialized_message(
       serialized_message->buffer + data_length);
     zenoh::Bytes payload(raw_image);
 
-    TRACEPOINT(
-      rmw_publish, serialized_message);
+    TRACETOOLS_TRACEPOINT(
+      rmw_publish, static_cast<const void *>(rmw_publisher_), serialized_message, source_timestamp);
 
     pub_.put(std::move(payload), std::move(opts), &result);
   }
@@ -423,7 +442,7 @@ liveliness::TopicInfo PublisherData::topic_info() const
   return entity_->topic_info().value();
 }
 
-std::array<uint8_t, 16> PublisherData::copy_gid() const
+std::array<uint8_t, RMW_GID_STORAGE_SIZE> PublisherData::copy_gid() const
 {
   std::lock_guard<std::mutex> lock(mutex_);
   return entity_->copy_gid();
@@ -473,14 +492,16 @@ rmw_ret_t PublisherData::shutdown()
   if (result != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
-      "Unable to undeclare the liveliness token");
+      "Unable to undeclare the liveliness token for topic '%s'",
+      entity_->topic_info().value().name_.c_str());
     return RMW_RET_ERROR;
   }
   std::move(pub_).undeclare(&result);
   if (result != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
-      "Unable to undeclare the publisher");
+      "Unable to undeclare the publisher for topic '%s'",
+      entity_->topic_info().value().name_.c_str());
     return RMW_RET_ERROR;
   }
 
