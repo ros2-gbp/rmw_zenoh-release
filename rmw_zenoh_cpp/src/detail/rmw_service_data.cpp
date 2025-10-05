@@ -40,8 +40,6 @@
 #include "rmw/get_topic_endpoint_info.h"
 #include "rmw/impl/cpp/macros.hpp"
 
-#include "tracetools/tracetools.h"
-
 namespace rmw_zenoh_cpp
 {
 ///=============================================================================
@@ -454,13 +452,6 @@ rmw_ret_t ServiceData::send_response(
     reinterpret_cast<const uint8_t *>(response_bytes) + data_length);
   zenoh::Bytes payload(std::move(raw_bytes));
 
-  TRACETOOLS_TRACEPOINT(
-    rmw_send_response,
-    static_cast<const void *>(rmw_service_),
-    static_cast<const void *>(ros_response),
-    request_id->writer_guid,
-    request_id->sequence_number,
-    source_timestamp);
   zenoh::ZResult result;
   loaned_query.reply(keyexpr_, std::move(payload), std::move(options), &result);
   if (result != Z_OK) {

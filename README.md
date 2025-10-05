@@ -5,9 +5,9 @@
 
 | Package | Status |
 | ------- | ------ |
-| rmw_zenoh_cpp | [![Build Status](https://build.ros2.org/view/Kbin_uN64/job/Kbin_uN64__rmw_zenoh_cpp__ubuntu_noble_amd64__binary/badge/icon)](https://build.ros2.org/view/Kbin_uN64/job/Kbin_uN64__rmw_zenoh_cpp__ubuntu_noble_amd64__binary/) |
-| zenoh_cpp_vendor | [![Build Status](https://build.ros2.org/view/Kbin_uN64/job/Kbin_uN64__zenoh_cpp_vendor__ubuntu_noble_amd64__binary/badge/icon)](https://build.ros2.org/view/Kbin_uN64/job/Kbin_uN64__zenoh_cpp_vendor__ubuntu_noble_amd64__binary/) |
-| zenoh_security_tools | [![Build Status](https://build.ros2.org/view/Kbin_uN64/job/Kbin_uN64__zenoh_security_tools__ubuntu_noble_amd64__binary/badge/icon)](https://build.ros2.org/view/Kbin_uN64/job/Kbin_uN64__zenoh_security_tools__ubuntu_noble_amd64__binary/) |
+| rmw_zenoh_cpp | [![Build Status](https://build.ros2.org/view/Jbin_uN64/job/Jbin_uN64__rmw_zenoh_cpp__ubuntu_noble_amd64__binary/badge/icon)](https://build.ros2.org/view/Jbin_uN64/job/Jbin_uN64__rmw_zenoh_cpp__ubuntu_noble_amd64__binary/) |
+| zenoh_cpp_vendor | [![Build Status](https://build.ros2.org/view/Jbin_uN64/job/Jbin_uN64__zenoh_cpp_vendor__ubuntu_noble_amd64__binary/badge/icon)](https://build.ros2.org/view/Jbin_uN64/job/Jbin_uN64__zenoh_cpp_vendor__ubuntu_noble_amd64__binary/) |
+| zenoh_security_tools | [![Build Status](https://build.ros2.org/view/Jbin_uN64/job/Jbin_uN64__zenoh_security_tools__ubuntu_noble_amd64__binary/badge/icon)](https://build.ros2.org/view/Jbin_uN64/job/Jbin_uN64__zenoh_security_tools__ubuntu_noble_amd64__binary/) |
 
 A ROS 2 RMW implementation based on Zenoh that is written using the zenoh-cpp bindings.
 
@@ -270,7 +270,6 @@ The following additional configuration options available as environment variable
 - Zenoh SHM works intra- and inter- containers if container's POSIX SHM is configured properly.
 
 ## Security
-
 Security is available in `rmw_zenoh` by means of access control, authentication and encryption.
 The [zenoh_security_tools](./zenoh_security_tools/) package contains a script to generate Zenoh configs with security configured along with documentation on its usage.
 
@@ -347,10 +346,3 @@ For more details, see https://github.com/ros2/rmw_zenoh/issues/170.
 Since Iron, ROS 2 introduced type hashes for messages and `rmw_zenoh` includes these type hashes in the Zenoh keyexpressions it constructs for data exchange. While participants will be discoverable, communication between Humble and newer distributions will fail, resulting in messages being silently dropped.
 
 For more details, see https://github.com/ros2/rmw_zenoh/issues/569.
-
-## Quality Declaration files
-
-Quality Declarations for each package in this repository:
-
-* [`rmw_zenoh_cpp`](rmw_zenoh_cpp/QUALITY_DECLARATION.md)
-* [`zenoh_cpp_vendor`](zenoh_cpp_vendor/QUALITY_DECLARATION.md)
