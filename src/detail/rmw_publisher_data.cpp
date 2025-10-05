@@ -100,6 +100,7 @@ std::shared_ptr<PublisherData> PublisherData::make(
   }
 
   using AdvancedPublisherOptions = zenoh::ext::SessionExt::AdvancedPublisherOptions;
+  using SampleMissDetectionOptions = AdvancedPublisherOptions::SampleMissDetectionOptions;
   auto adv_pub_opts = AdvancedPublisherOptions::create_default();
 
   if (adapted_qos_profile.durability == RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL) {
@@ -111,8 +112,9 @@ std::shared_ptr<PublisherData> PublisherData::make(
       // If RELIABLE + TRANSIENT_LOCAL activate sample miss detection for subscriber
       // to detect missed samples and retrieve those from the Publisher cache.
       // HeartbeatSporadic is used to prevent excessive background traffic
-      adv_pub_opts.sample_miss_detection.emplace().heartbeat =
-        AdvancedPublisherOptions::SampleMissDetectionOptions::HeartbeatSporadic{
+      adv_pub_opts.sample_miss_detection = SampleMissDetectionOptions{};
+      adv_pub_opts.sample_miss_detection->heartbeat =
+        SampleMissDetectionOptions::HeartbeatSporadic{
         SAMPLE_MISS_DETECTION_HEARTBEAT_PERIOD};
     }
   }
@@ -302,10 +304,10 @@ rmw_ret_t PublisherData::publish(
       };
     payload = zenoh::Bytes(msg_bytes, data_length, deleter);
   } else {
-    std::vector<uint8_t> raw_data(
-      reinterpret_cast<const uint8_t *>(msg_bytes),
-      reinterpret_cast<const uint8_t *>(msg_bytes) + data_length);
-    payload = zenoh::Bytes(std::move(raw_data));
+    auto deleter = [msg_bytes, allocator](uint8_t *) {
+        allocator->deallocate(msg_bytes, allocator->state);
+      };
+    payload = zenoh::Bytes(msg_bytes, data_length, deleter);
   }
   // The delete responsibility has been handed over to zenoh::Bytes now
   always_free_msg_bytes.cancel();
@@ -473,14 +475,16 @@ rmw_ret_t PublisherData::shutdown()
   if (result != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
-      "Unable to undeclare the liveliness token");
+      "Unable to undeclare the liveliness token for topic '%s'",
+      entity_->topic_info().value().name_.c_str());
     return RMW_RET_ERROR;
   }
   std::move(pub_).undeclare(&result);
   if (result != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
-      "Unable to undeclare the publisher");
+      "Unable to undeclare the publisher for topic '%s'",
+      entity_->topic_info().value().name_.c_str());
     return RMW_RET_ERROR;
   }
 
