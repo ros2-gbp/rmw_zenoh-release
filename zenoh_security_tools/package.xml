@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>zenoh_security_tools</name>
-  <version>0.9.1</version>
+  <version>0.10.0</version>
   <description>This package generates config files to enforce security with Zenoh</description>
   <maintainer email="alejandro@openrobotics.org">Alejandro Hernanadez</maintainer>
   <license>Apache License 2.0</license>
@@ -14,7 +14,7 @@
   <depend>rcutils</depend>
   <depend>rmw</depend>
   <depend>rmw_security_common</depend>
-  <depend>tinyxml2_vendor</depend>
+  <depend>tinyxml2</depend>
   <depend>zenoh_cpp_vendor</depend>
 
   <test_depend>ament_lint_auto</test_depend>
