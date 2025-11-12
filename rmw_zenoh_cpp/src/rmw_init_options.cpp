@@ -47,8 +47,8 @@ rmw_init_options_init(rmw_init_options_t * init_options, rcutils_allocator_t all
   init_options->enclave = nullptr;
   init_options->domain_id = RMW_DEFAULT_DOMAIN_ID;
   init_options->security_options = rmw_get_default_security_options();
-  init_options->localhost_only = RMW_LOCALHOST_ONLY_DEFAULT;
-  return RMW_RET_OK;
+  init_options->discovery_options = rmw_get_zero_initialized_discovery_options();
+  return rmw_discovery_options_init(&(init_options->discovery_options), 0, &allocator);
 }
 
 //==============================================================================
@@ -87,17 +87,29 @@ rmw_init_options_copy(const rmw_init_options_t * src, rmw_init_options_t * dst)
     [&tmp, allocator]() {
       rmw_security_options_fini(&tmp.security_options, &allocator);
     });
-  tmp.enclave = nullptr;
+  tmp.discovery_options = rmw_get_zero_initialized_discovery_options();
+  ret = rmw_discovery_options_copy(
+    &src->discovery_options,
+    &allocator,
+    &tmp.discovery_options);
+  if (RMW_RET_OK != ret) {
+    return ret;
+  }
+  auto free_discovery_options = rcpputils::make_scope_exit(
+    [&tmp]() {
+      rmw_ret_t tmp_ret = rmw_discovery_options_fini(&tmp.discovery_options);
+      static_cast<void>(tmp_ret);
+    });
   if (nullptr != src->enclave) {
-    tmp.enclave = rcutils_strdup(src->enclave, allocator);
-    if (nullptr == tmp.enclave) {
-      return RMW_RET_BAD_ALLOC;
+    ret = rmw_enclave_options_copy(src->enclave, &allocator, &tmp.enclave);
+    if (RMW_RET_OK != ret) {
+      return ret;
     }
   }
   auto free_enclave = rcpputils::make_scope_exit(
     [&tmp, allocator]() {
       if (nullptr != tmp.enclave) {
-        allocator.deallocate(tmp.enclave, allocator.state);
+        rmw_enclave_options_fini(tmp.enclave, &allocator);
       }
     });
 
@@ -109,6 +121,7 @@ rmw_init_options_copy(const rmw_init_options_t * src, rmw_init_options_t * dst)
   *dst = tmp;
 
   free_enclave.cancel();
+  free_discovery_options.cancel();
   free_security_options.cancel();
 
   return RMW_RET_OK;
@@ -132,12 +145,19 @@ rmw_init_options_fini(rmw_init_options_t * init_options)
   rcutils_allocator_t * allocator = &init_options->allocator;
   RCUTILS_CHECK_ALLOCATOR(allocator, return RMW_RET_INVALID_ARGUMENT);
 
-  allocator->deallocate(init_options->enclave, allocator->state);
-  rmw_ret_t ret = rmw_security_options_fini(&init_options->security_options, allocator);
+  rmw_ret_t ret;
+  if (init_options->enclave != NULL) {
+    ret = rmw_enclave_options_fini(init_options->enclave, allocator);
+    if (ret != RMW_RET_OK) {
+      return ret;
+    }
+  }
+  ret = rmw_security_options_fini(&init_options->security_options, allocator);
   if (ret != RMW_RET_OK) {
     return ret;
   }
 
+  ret = rmw_discovery_options_fini(&init_options->discovery_options);
   *init_options = rmw_get_zero_initialized_init_options();
 
   return ret;
