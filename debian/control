@@ -1,0 +1,12 @@
+Source: ros-kilted-rmw-zenoh-cpp
+Section: misc
+Priority: optional
+Maintainer: Yadunund <yadunund@openrobotics.org>
+Build-Depends: debhelper (>= 9.0.0), nlohmann-json3-dev, ros-kilted-ament-cmake, ros-kilted-ament-index-cpp, ros-kilted-ament-lint-auto <!nocheck>, ros-kilted-ament-lint-common <!nocheck>, ros-kilted-fastcdr, ros-kilted-rcpputils, ros-kilted-rcutils, ros-kilted-rmw, ros-kilted-rmw-test-fixture, ros-kilted-rosidl-typesupport-fastrtps-c, ros-kilted-rosidl-typesupport-fastrtps-cpp, ros-kilted-tracetools, ros-kilted-zenoh-cpp-vendor, ros-kilted-ros-workspace
+Homepage: 
+Standards-Version: 3.9.2
+
+Package: ros-kilted-rmw-zenoh-cpp
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, ros-kilted-ament-index-cpp, ros-kilted-fastcdr, ros-kilted-rcpputils, ros-kilted-rcutils, ros-kilted-rmw, ros-kilted-rmw-test-fixture, ros-kilted-rosidl-typesupport-fastrtps-c, ros-kilted-rosidl-typesupport-fastrtps-cpp, ros-kilted-tracetools, ros-kilted-zenoh-cpp-vendor, ros-kilted-ros-workspace
+Description: A ROS 2 middleware implementation using zenoh-cpp
