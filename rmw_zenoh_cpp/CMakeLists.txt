@@ -52,6 +52,7 @@ add_library(rmw_zenoh_cpp SHARED
   src/rmw_event.cpp
   src/rmw_get_network_flow_endpoints.cpp
   src/rmw_get_node_info_and_types.cpp
+  src/rmw_get_service_endpoint_info.cpp
   src/rmw_get_service_names_and_types.cpp
   src/rmw_get_topic_endpoint_info.cpp
   src/rmw_get_topic_names_and_types.cpp
@@ -105,8 +106,8 @@ target_link_libraries(rmw_zenoh_cpp_test_fixture
 ament_export_targets(export_rmw_zenoh_cpp)
 
 register_rmw_implementation(
-  "c:rosidl_typesupport_c:rosidl_typesupport_fastrtps_c:rosidl_typesupport_introspection_c"
-  "cpp:rosidl_typesupport_cpp:rosidl_typesupport_fastrtps_cpp:rosidl_typesupport_introspection_cpp")
+  "c:rosidl_typesupport_fastrtps_c:rosidl_typesupport_introspection_c"
+  "cpp:rosidl_typesupport_fastrtps_cpp:rosidl_typesupport_introspection_cpp")
 
 if(BUILD_TESTING)
   find_package(ament_cmake_copyright REQUIRED)
