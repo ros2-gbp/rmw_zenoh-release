@@ -14,6 +14,7 @@
 
 #include "rmw_context_impl_s.hpp"
 
+#include <atomic>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
@@ -43,18 +44,207 @@
 // TODO(clalancette): Make this configurable, or get it from the configuration
 #define SHM_BUFFER_SIZE_MB 10
 
+// Zenoh config key for SHM pool size
+static const char * CONFIG_KEY_SHM_POOL_SIZE =
+  "transport/shared_memory/transport_optimization/pool_size";
+
+// Zenoh config key for SHM threshold size
+static const char * CONFIG_KEY_SHM_THRESHOLD_SIZE =
+  "transport/shared_memory/transport_optimization/message_size_threshold";
+
+
 // Bundle all class members into a data struct which can be passed as a
 // weak ptr to various threads for thread-safe access without capturing
 // "this" ptr by reference.
 class rmw_context_impl_s::Data final : public std::enable_shared_from_this<Data>
 {
 public:
-  // Constructor.
+  // Make a shared_ptr of Data.
+  static std::shared_ptr<Data> make(
+    std::size_t domain_id,
+    const std::string & enclave)
+  {
+    auto data = std::shared_ptr<Data>(new Data(domain_id, enclave));
+    data->init();
+    return data;
+  }
+
+  // Shutdown the Zenoh session.
+  rmw_ret_t shutdown()
+  {
+    rmw_ret_t ret = RMW_RET_OK;
+    bool expected = false;
+    if (!is_shutdown_.compare_exchange_strong(expected, true, std::memory_order_acq_rel,
+      std::memory_order_relaxed))
+    {
+      return ret;
+    }
+
+    zenoh::ZResult result;
+    // no synchronization is needed here since undeclare will block
+    // until inflight callbacks are finished
+    std::move(graph_subscriber_).value().undeclare(&result);
+    if (result != Z_OK) {
+      RMW_ZENOH_LOG_ERROR_NAMED(
+        "rmw_zenoh_cpp",
+        "Unable to undeclare the liveliness token");
+      return RMW_RET_ERROR;
+    }
+
+    // Explicitly close the session before releasing our shared_ptr reference.
+    // This calls wait_callbacks() internally (since zenoh commit e5db0ce), which waits
+    // for all in-flight callbacks to finish. We call close() here while node-level entities
+    // (subscriptions, publishers, etc.) are still alive — at shutdown time, the spin loop
+    // has already exited so there are no active callbacks, and wait_callbacks() returns
+    // immediately. The session is then marked as closed, so when the shared_ptr refcount
+    // eventually reaches zero (after rcl destroys each handle in the normal teardown order),
+    // the session destructor finds is_closed()==true and skips the blocking close() call.
+    session_->close();
+
+    session_.reset();
+
+    return RMW_RET_OK;
+  }
+
+  std::string enclave() const
+  {
+    return enclave_;
+  }
+
+  const std::shared_ptr<zenoh::Session> session() const
+  {
+    return session_;
+  }
+
+  const std::shared_ptr<rmw_zenoh_cpp::ShmContext> shm() const
+  {
+    return shm_;
+  }
+
+  rmw_guard_condition_t * graph_guard_condition()
+  {
+    return graph_guard_condition_.get();
+  }
+
+  std::size_t get_next_entity_id()
+  {
+    return next_entity_id_.fetch_add(1, std::memory_order_relaxed);
+  }
+
+  bool is_shutdown() const
+  {
+    return is_shutdown_.load(std::memory_order_acquire);
+  }
+
+  bool session_is_valid() const
+  {
+    return !session_->is_closed();
+  }
+
+  std::shared_ptr<rmw_zenoh_cpp::GraphCache> graph_cache()
+  {
+    return graph_cache_;
+  }
+
+  std::shared_ptr<rmw_zenoh_cpp::BufferPool> serialization_buffer_pool()
+  {
+    return serialization_buffer_pool_;
+  }
+
+  bool create_node_data(
+    const rmw_node_t * const node,
+    const std::string & ns,
+    const std::string & node_name)
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (nodes_.count(node) > 0) {
+      // Node already exists.
+      return false;
+    }
+
+    // Check that the Zenoh session is still valid.
+    if (!session_is_valid()) {
+      RMW_ZENOH_LOG_ERROR_NAMED(
+        "rmw_zenoh_cpp",
+        "Unable to create NodeData as Zenoh session is invalid.");
+      return false;
+    }
+
+    auto node_data = rmw_zenoh_cpp::NodeData::make(
+      node,
+      this->get_next_entity_id(),
+      session(),
+      domain_id_,
+      ns,
+      node_name,
+      enclave_);
+    if (node_data == nullptr) {
+      // Error already handled.
+      return false;
+    }
+
+    auto node_insertion = nodes_.insert(std::make_pair(node, std::move(node_data)));
+    if (!node_insertion.second) {
+      return false;
+    }
+
+    return true;
+  }
+
+  std::shared_ptr<rmw_zenoh_cpp::NodeData> get_node_data(const rmw_node_t * const node)
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    auto node_it = nodes_.find(node);
+    if (node_it == nodes_.end()) {
+      return nullptr;
+    }
+    return node_it->second;
+  }
+
+  void delete_node_data(const rmw_node_t * const node)
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    nodes_.erase(node);
+  }
+
+  void update_graph_cache(const zenoh::Sample & sample_kind, const std::string & keystr)
+  {
+    switch (sample_kind.get_kind()) {
+      case zenoh::SampleKind::Z_SAMPLE_KIND_PUT:
+        graph_cache_->parse_put(keystr);
+        break;
+      case zenoh::SampleKind::Z_SAMPLE_KIND_DELETE:
+        graph_cache_->parse_del(keystr);
+        break;
+      default:
+        return;
+    }
+
+    // Trigger the ROS graph guard condition.
+    rmw_ret_t rmw_ret = rmw_trigger_guard_condition(graph_guard_condition_.get());
+    if (RMW_RET_OK != rmw_ret) {
+      RMW_ZENOH_LOG_WARN_NAMED(
+        "rmw_zenoh_cpp",
+        "[update_graph_cache] Unable to trigger graph guard condition."
+      );
+    }
+  }
+
+  // Destructor.
+  ~Data()
+  {
+    auto ret = this->shutdown();
+    nodes_.clear();
+    static_cast<void>(ret);
+  }
+
+private:
+  // Private Constructor, to force the use of the make() method which returns a shared_ptr.
   Data(
     std::size_t domain_id,
     const std::string & enclave)
-  : domain_id_(std::move(domain_id)),
-    enclave_(std::move(enclave)),
+  : domain_id_(domain_id),
+    enclave_(enclave),
     is_shutdown_(false),
     next_entity_id_(0),
     nodes_({}),
@@ -68,10 +258,37 @@ public:
       throw std::runtime_error("Error configuring Zenoh session.");
     }
 
+    // Insert or replace some Config parameters based on environment variables.
+    {
+      // Handle SHM allocation size.
+      if (const auto shm_alloc_size = rmw_zenoh_cpp::zenoh_shm_alloc_size() ) {
+        RMW_ZENOH_LOG_INFO_NAMED(
+            "rmw_zenoh_cpp",
+            "ZENOH_SHM_ALLOC_SIZE=%d overriding the configuration key '%s'.",
+            shm_alloc_size.value(), CONFIG_KEY_SHM_POOL_SIZE);
+        config.value().insert_json5(
+          CONFIG_KEY_SHM_POOL_SIZE,
+          std::to_string(shm_alloc_size.value()));
+      }
+
+      // Handle SHM message size threshold.
+      if (const auto shm_threshold = rmw_zenoh_cpp::zenoh_shm_message_size_threshold() ) {
+        RMW_ZENOH_LOG_INFO_NAMED(
+            "rmw_zenoh_cpp",
+            "ZENOH_SHM_MESSAGE_SIZE_THRESHOLD=%d overriding the configuration key '%s'.",
+            shm_threshold.value(), CONFIG_KEY_SHM_THRESHOLD_SIZE);
+        config.value().insert_json5(
+          CONFIG_KEY_SHM_THRESHOLD_SIZE,
+          std::to_string(shm_threshold.value()));
+      }
+    }
+
     zenoh::ZResult result;
 
-    // Check if shm is enabled.
+    // Get shm configuration.
     bool shm_enabled = false;
+    std::size_t shm_pool_size = 0;
+    std::size_t msgsize_threshold = 512;
     {
       std::string shm_enabled_val = config.value().get(Z_CONFIG_SHARED_MEMORY_KEY, &result);
       if (result == Z_OK) {
@@ -81,6 +298,62 @@ public:
           "rmw_zenoh_cpp",
           "Not able to get %s from the config file",
           Z_CONFIG_SHARED_MEMORY_KEY);
+      }
+
+      std::string shm_size_threshold_val = config.value().get(
+        CONFIG_KEY_SHM_THRESHOLD_SIZE,
+        &result);
+      if (result == Z_OK) {
+        try {
+          msgsize_threshold = std::stoull(shm_size_threshold_val);
+        } catch (const std::invalid_argument & e) {
+          RMW_ZENOH_LOG_ERROR_NAMED(
+            "rmw_zenoh_cpp",
+            "Not able to get %s from the config file: invalid argument: %s",
+            CONFIG_KEY_SHM_THRESHOLD_SIZE,
+            e.what()
+          );
+        } catch (const std::out_of_range & e) {
+          RMW_ZENOH_LOG_ERROR_NAMED(
+            "rmw_zenoh_cpp",
+            "Not able to get %s from the config file: out of range: %s",
+            CONFIG_KEY_SHM_THRESHOLD_SIZE,
+            e.what()
+          );
+        }
+      } else {
+        RMW_ZENOH_LOG_ERROR_NAMED(
+          "rmw_zenoh_cpp",
+          "Not able to get %s from the config file",
+          CONFIG_KEY_SHM_THRESHOLD_SIZE);
+      }
+
+      std::string shm_pool_size_val = config.value().get(
+        CONFIG_KEY_SHM_POOL_SIZE,
+        &result);
+      if (result == Z_OK) {
+        try {
+          shm_pool_size = std::stoull(shm_pool_size_val);
+        } catch (const std::invalid_argument & e) {
+          RMW_ZENOH_LOG_ERROR_NAMED(
+            "rmw_zenoh_cpp",
+            "Not able to get %s from the config file: invalid argument: %s",
+            CONFIG_KEY_SHM_POOL_SIZE,
+            e.what()
+          );
+        } catch (const std::out_of_range & e) {
+          RMW_ZENOH_LOG_ERROR_NAMED(
+            "rmw_zenoh_cpp",
+            "Not able to get %s from the config file: out of range: %s",
+            CONFIG_KEY_SHM_POOL_SIZE,
+            e.what()
+          );
+        }
+      } else {
+        RMW_ZENOH_LOG_ERROR_NAMED(
+          "rmw_zenoh_cpp",
+          "Not able to get %s from the config file",
+          CONFIG_KEY_SHM_POOL_SIZE);
       }
     }
 
@@ -182,12 +455,11 @@ public:
     if (shm_enabled) {
       RMW_ZENOH_LOG_DEBUG_NAMED("rmw_zenoh_cpp",
         "SHM is enabled - allocated size: %d - msg size threshold: %d",
-        rmw_zenoh_cpp::zenoh_shm_alloc_size(),
-        rmw_zenoh_cpp::zenoh_shm_message_size_threshold());
+        shm_pool_size,
+        msgsize_threshold);
 
       shm_ = std::make_shared<rmw_zenoh_cpp::ShmContext>(
-          rmw_zenoh_cpp::zenoh_shm_alloc_size(),
-          rmw_zenoh_cpp::zenoh_shm_message_size_threshold()
+          msgsize_threshold
       );
     } else {
       RMW_ZENOH_LOG_DEBUG_NAMED("rmw_zenoh_cpp", "SHM is disabled");
@@ -235,185 +507,8 @@ public:
     }
   }
 
-  // Shutdown the Zenoh session.
-  rmw_ret_t shutdown()
-  {
-    {
-      std::lock_guard<std::recursive_mutex> lock(mutex_);
-      rmw_ret_t ret = RMW_RET_OK;
-      if (is_shutdown_) {
-        return ret;
-      }
-
-      zenoh::ZResult result;
-      std::move(graph_subscriber_).value().undeclare(&result);
-      if (result != Z_OK) {
-        RMW_ZENOH_LOG_ERROR_NAMED(
-          "rmw_zenoh_cpp",
-          "Unable to undeclare the liveliness token");
-        return RMW_RET_ERROR;
-      }
-
-      is_shutdown_ = true;
-
-      // We specifically do *not* hold the mutex_ while tearing down the session; this allows us
-      // to avoid an AB/BA deadlock if shutdown is racing with graph_sub_data_handler().
-    }
-
-    // Drop the shared session.
-    session_.reset();
-
-    return RMW_RET_OK;
-  }
-
-  std::string enclave() const
-  {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
-    return enclave_;
-  }
-
-  const std::shared_ptr<zenoh::Session> session() const
-  {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
-    return session_;
-  }
-
-  const std::shared_ptr<rmw_zenoh_cpp::ShmContext> shm() const
-  {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
-    return shm_;
-  }
-
-  rmw_guard_condition_t * graph_guard_condition()
-  {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
-    return graph_guard_condition_.get();
-  }
-
-  std::size_t get_next_entity_id()
-  {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
-    return next_entity_id_++;
-  }
-
-  bool is_shutdown() const
-  {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
-    return is_shutdown_;
-  }
-
-  bool session_is_valid() const
-  {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
-    return !session_->is_closed();
-  }
-
-  std::shared_ptr<rmw_zenoh_cpp::GraphCache> graph_cache()
-  {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
-    return graph_cache_;
-  }
-
-  std::shared_ptr<rmw_zenoh_cpp::BufferPool> serialization_buffer_pool()
-  {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
-    return serialization_buffer_pool_;
-  }
-
-  bool create_node_data(
-    const rmw_node_t * const node,
-    const std::string & ns,
-    const std::string & node_name)
-  {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
-    if (nodes_.count(node) > 0) {
-      // Node already exists.
-      return false;
-    }
-
-    // Check that the Zenoh session is still valid.
-    if (!session_is_valid()) {
-      RMW_ZENOH_LOG_ERROR_NAMED(
-        "rmw_zenoh_cpp",
-        "Unable to create NodeData as Zenoh session is invalid.");
-      return false;
-    }
-
-    auto node_data = rmw_zenoh_cpp::NodeData::make(
-      node,
-      this->get_next_entity_id(),
-      session(),
-      domain_id_,
-      ns,
-      node_name,
-      enclave_);
-    if (node_data == nullptr) {
-      // Error already handled.
-      return false;
-    }
-
-    auto node_insertion = nodes_.insert(std::make_pair(node, std::move(node_data)));
-    if (!node_insertion.second) {
-      return false;
-    }
-
-    return true;
-  }
-
-  std::shared_ptr<rmw_zenoh_cpp::NodeData> get_node_data(const rmw_node_t * const node)
-  {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
-    auto node_it = nodes_.find(node);
-    if (node_it == nodes_.end()) {
-      return nullptr;
-    }
-    return node_it->second;
-  }
-
-  void delete_node_data(const rmw_node_t * const node)
-  {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
-    nodes_.erase(node);
-  }
-
-  void update_graph_cache(const zenoh::Sample & sample_kind, const std::string & keystr)
-  {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
-    if (is_shutdown_) {
-      return;
-    }
-    switch (sample_kind.get_kind()) {
-      case zenoh::SampleKind::Z_SAMPLE_KIND_PUT:
-        graph_cache_->parse_put(keystr);
-        break;
-      case zenoh::SampleKind::Z_SAMPLE_KIND_DELETE:
-        graph_cache_->parse_del(keystr);
-        break;
-      default:
-        return;
-    }
-
-    // Trigger the ROS graph guard condition.
-    rmw_ret_t rmw_ret = rmw_trigger_guard_condition(graph_guard_condition_.get());
-    if (RMW_RET_OK != rmw_ret) {
-      RMW_ZENOH_LOG_WARN_NAMED(
-        "rmw_zenoh_cpp",
-        "[update_graph_cache] Unable to trigger graph guard condition."
-      );
-    }
-  }
-
-  // Destructor.
-  ~Data()
-  {
-    auto ret = this->shutdown();
-    nodes_.clear();
-    static_cast<void>(ret);
-  }
-
-private:
   // Mutex to lock when accessing members.
-  mutable std::recursive_mutex mutex_;
+  mutable std::mutex mutex_;
   // The ROS domain id of this context.
   std::size_t domain_id_;
   // Enclave, name used to find security artifacts in a sros2 keystore.
@@ -444,9 +539,9 @@ private:
   // The GuardCondition data structure.
   rmw_zenoh_cpp::GuardCondition guard_condition_data_;
   // Shutdown flag.
-  bool is_shutdown_;
+  std::atomic<bool> is_shutdown_;
   // A counter to assign a local id for every entity created in this session.
-  std::size_t next_entity_id_;
+  std::atomic<std::size_t> next_entity_id_;
   // Nodes created from this context.
   std::unordered_map<const rmw_node_t *, std::shared_ptr<rmw_zenoh_cpp::NodeData>> nodes_;
 
@@ -458,8 +553,7 @@ rmw_context_impl_s::rmw_context_impl_s(
   const std::size_t domain_id,
   const std::string & enclave)
 {
-  data_ = std::make_shared<Data>(domain_id, std::move(enclave));
-  data_->init();
+  data_ = Data::make(domain_id, enclave);
 }
 
 ///=============================================================================
