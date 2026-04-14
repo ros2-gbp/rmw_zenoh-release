@@ -58,6 +58,8 @@
 
 #include "tracetools/tracetools.h"
 
+#include "rmw_zenoh_cpp/rmw_zenoh.hpp"
+
 namespace
 {
 //==============================================================================
@@ -138,16 +140,15 @@ bool rmw_feature_supported(rmw_feature_t feature)
 {
   switch (feature) {
     case RMW_FEATURE_MESSAGE_INFO_PUBLICATION_SEQUENCE_NUMBER:
-      return false;
+      return true;
     case RMW_FEATURE_MESSAGE_INFO_RECEPTION_SEQUENCE_NUMBER:
-      return false;
+      return true;
     case RMW_MIDDLEWARE_SUPPORTS_TYPE_DISCOVERY:
       return true;
     case RMW_MIDDLEWARE_CAN_TAKE_DYNAMIC_MESSAGE:
       return false;
-    default:
-      return false;
   }
+  return false;
 }
 
 //==============================================================================
@@ -619,7 +620,7 @@ rmw_publish(
 
   return pub_data->publish(
     ros_message,
-    context_impl->shm()
+    context_impl->shm().get()
   );
 }
 
@@ -727,7 +728,7 @@ rmw_publish_serialized_message(
 
   return publisher_data->publish_serialized_message(
     serialized_message,
-    context_impl->shm()
+    context_impl->shm().get()
   );
 }
 
@@ -930,8 +931,6 @@ rmw_create_subscription(
     return nullptr;
   }
 
-  // TODO(yadunund): Check if a duplicate entry for the same topic name + topic type
-  // is present in node_data->subscriptions and if so return error;
   RMW_CHECK_FOR_NULL_WITH_MSG(
     node->context,
     "expected initialized context",
@@ -1002,6 +1001,7 @@ rmw_create_subscription(
   rmw_subscription->options = *subscription_options;
   rmw_subscription->can_loan_messages = false;
   rmw_subscription->is_cft_enabled = false;
+  rmw_subscription->is_cft_supported = false;
   rmw_subscription->topic_name = rcutils_strdup(topic_name, *allocator);
   RMW_CHECK_FOR_NULL_WITH_MSG(
     rmw_subscription->topic_name,
@@ -1695,7 +1695,6 @@ rmw_create_service(
   RMW_CHECK_ARGUMENT_FOR_NULL(qos_profile, nullptr);
   if (!qos_profile->avoid_ros_namespace_conventions) {
     int validation_result = RMW_TOPIC_VALID;
-    // TODO(francocipollone): Verify if this is the right way to validate the service name.
     rmw_ret_t ret = rmw_validate_full_topic_name(service_name, &validation_result, nullptr);
     if (RMW_RET_OK != ret) {
       return nullptr;
@@ -2667,8 +2666,6 @@ rmw_set_log_severity(rmw_log_severity_t severity)
     case RMW_LOG_SEVERITY_FATAL:
       rmw_zenoh_cpp::Logger::get().set_log_level(RCUTILS_LOG_SEVERITY_FATAL);
       break;
-    default:
-      return RMW_RET_UNSUPPORTED;
   }
   return RMW_RET_OK;
 }
@@ -2724,3 +2721,23 @@ rmw_client_set_on_new_response_callback(
   return RMW_RET_OK;
 }
 }  // extern "C"
+
+//==============================================================================
+/// Get the Zenoh session associated with the given RMW context.
+const std::shared_ptr<zenoh::Session>
+rmw_zenoh_get_session(const rmw_context_t * context)
+{
+  RMW_CHECK_ARGUMENT_FOR_NULL(context, nullptr);
+  RMW_CHECK_TYPE_IDENTIFIERS_MATCH(
+    context,
+    context->implementation_identifier,
+    rmw_zenoh_cpp::rmw_zenoh_identifier,
+    return nullptr);
+  RMW_CHECK_FOR_NULL_WITH_MSG(
+    context->impl,
+    "expected initialized context",
+    return nullptr);
+  rmw_context_impl_s * context_impl = static_cast<rmw_context_impl_s *>(
+    context->impl);
+  return context_impl->session();
+}
