@@ -25,7 +25,8 @@
 
 #include "logging_macros.hpp"
 
-#include <ament_index_cpp/get_package_share_directory.hpp>
+#include <ament_index_cpp/get_package_share_path.hpp>
+#include <ament_index_cpp/get_package_prefix.hpp> /* for PackageNotFoundError */
 #include <rmw/impl/cpp/macros.hpp>
 
 ///=============================================================================
@@ -45,9 +46,7 @@ static const std::unordered_map<ConfigurableEntity,
 
 static const char * router_check_attempts_envar = "ZENOH_ROUTER_CHECK_ATTEMPTS";
 static const char * zenoh_shm_alloc_size_envar = "ZENOH_SHM_ALLOC_SIZE";
-static const size_t zenoh_shm_alloc_size_default = 48 * 1024 * 1024;
 static const char * zenoh_shm_message_size_threshold_envar = "ZENOH_SHM_MESSAGE_SIZE_THRESHOLD";
-static const size_t zenoh_shm_message_size_threshold_default = 512;
 /// Allow users to override the configuration using key-value pairs.
 /// The supporting syntax is "key1=value2;key2=value2;...". For instance,
 /// ZENOH_CONFIG_OVERRIDE='listen/endpoints=["tcp/127.0.0.1:7448"];scouting/multicast/enabled=true'
@@ -55,9 +54,9 @@ static const char * zenoh_config_override = "ZENOH_CONFIG_OVERRIDE";
 
 std::optional<zenoh::Config> _get_z_config(
   const char * envar_name,
-  const char * default_uri)
+  const std::filesystem::path & default_uri)
 {
-  const char * configured_uri;
+  std::filesystem::path configured_uri;
   const char * envar_uri;
   // Get the path to the zenoh configuration file from the environment variable.
   if (NULL != rcutils_get_env(envar_name, &envar_uri)) {
@@ -66,16 +65,17 @@ std::optional<zenoh::Config> _get_z_config(
       "rmw_zenoh_cpp", "Envar %s cannot be read.", envar_name);
     return std::nullopt;
   }
+  std::filesystem::path envar_uri_p(envar_uri);
   // If the environment variable is set, try to read the configuration from the file,
   // if the environment variable is not set use internal configuration
-  configured_uri = envar_uri[0] != '\0' ? envar_uri : default_uri;
+  configured_uri = envar_uri[0] != '\0' ? envar_uri_p : default_uri;
   // Try to read the configuration
   zenoh::ZResult result;
-  zenoh::Config config = zenoh::Config::from_file(configured_uri, &result);
+  zenoh::Config config = zenoh::Config::from_file(configured_uri.string(), &result);
   if (result != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
-      "Invalid configuration file %s", configured_uri);
+      "Invalid configuration file %s", configured_uri.c_str());
     return std::nullopt;
   }
 
@@ -106,7 +106,7 @@ std::optional<zenoh::Config> _get_z_config(
 
   RMW_ZENOH_LOG_DEBUG_NAMED(
     "rmw_zenoh_cpp",
-    "configured using configuration file %s", configured_uri);
+    "configured using configuration file %s", configured_uri.c_str());
   return config;
 }
 }  // namespace
@@ -120,12 +120,23 @@ std::optional<zenoh::Config> get_z_config(const ConfigurableEntity & entity)
       "rmw_zenoh_cpp", "get_z_config called with invalid ConfigurableEntity.");
     return std::nullopt;
   }
-  // Get the absolute path to the default configuration file.
-  static const std::string path_to_config_folder =
-    ament_index_cpp::get_package_share_directory("rmw_zenoh_cpp") + "/config/";
-  const std::string default_config_path = path_to_config_folder + envar_map_it->second.second;
 
-  return _get_z_config(envar_map_it->second.first, default_config_path.c_str());
+  std::filesystem::path default_config_path;
+
+  try {
+    // Get the absolute path to the default configuration file.
+    std::filesystem::path path_to_config_folder =
+      ament_index_cpp::get_package_share_path("rmw_zenoh_cpp") / "config";
+
+    default_config_path = path_to_config_folder / envar_map_it->second.second;
+  } catch (const ament_index_cpp::PackageNotFoundError & e) {
+    RMW_ZENOH_LOG_WARN_NAMED(
+      "rmw_zenoh_cpp",
+      "Failed to find rmw_zenoh_cpp package in ament_index (%s). "
+      "Relying on 'ZENOH_*_CONFIG_URI' ENV vars.", e.what());
+  }
+
+  return _get_z_config(envar_map_it->second.first, default_config_path);
 }
 
 ///=============================================================================
@@ -160,7 +171,7 @@ std::optional<uint64_t> zenoh_router_check_attempts()
 }
 
 ///=============================================================================
-size_t zenoh_shm_alloc_size()
+std::optional<size_t> zenoh_shm_alloc_size()
 {
   const char * envar_value;
 
@@ -168,7 +179,7 @@ size_t zenoh_shm_alloc_size()
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp", "Envar %s cannot be read. Report this bug.",
       zenoh_shm_alloc_size_envar);
-    return zenoh_shm_alloc_size_default;
+    return std::nullopt;
   }
 
   // If the environment variable contains a value, handle it accordingly.
@@ -185,10 +196,11 @@ size_t zenoh_shm_alloc_size()
     }
   }
 
-  return zenoh_shm_alloc_size_default;
+  return std::nullopt;
 }
+
 ///=============================================================================
-size_t zenoh_shm_message_size_threshold()
+std::optional<size_t> zenoh_shm_message_size_threshold()
 {
   const char * envar_value;
 
@@ -196,7 +208,7 @@ size_t zenoh_shm_message_size_threshold()
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp", "Envar %s cannot be read. Report this bug.",
       zenoh_shm_message_size_threshold_envar);
-    return zenoh_shm_message_size_threshold_default;
+    return std::nullopt;
   }
 
   // If the environment variable contains a value, handle it accordingly.
@@ -218,6 +230,7 @@ size_t zenoh_shm_message_size_threshold()
     }
   }
 
-  return zenoh_shm_message_size_threshold_default;
+  return std::nullopt;
 }
+
 }  // namespace rmw_zenoh_cpp
