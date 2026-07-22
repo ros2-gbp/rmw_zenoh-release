@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>rmw_zenoh_cpp</name>
-  <version>0.12.0</version>
+  <version>0.10.5</version>
   <description>A ROS 2 middleware implementation using zenoh-cpp</description>
   <maintainer email="yadunund@openrobotics.org">Yadunund</maintainer>
 
@@ -13,8 +13,6 @@
   <author>Franco Cipollone</author>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
-  <buildtool_depend>ament_cmake_ros_core</buildtool_depend>
-  <buildtool_export_depend>ament_cmake_ros_core</buildtool_export_depend>
 
   <build_depend>nlohmann-json-dev</build_depend>
   <build_depend>zenoh_cpp_vendor</build_depend>

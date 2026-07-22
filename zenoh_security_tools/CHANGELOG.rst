@@ -2,13 +2,10 @@
 Changelog for package zenoh_security_tools
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-0.12.0 (2026-07-22)
+0.10.5 (2026-07-22)
 -------------------
-* publish-deny topic correctly denied (`#1007 <https://github.com/ros2/rmw_zenoh/issues/1007>`_)
-* use C++ 20 in default. (`#1006 <https://github.com/ros2/rmw_zenoh/issues/1006>`_)
-* Contributors: Alejandro Hernandez Cordero, Tomoya Fujita
 
-0.11.0 (2026-05-07)
+0.10.4 (2026-04-30)
 -------------------
 
 0.10.3 (2026-04-14)
