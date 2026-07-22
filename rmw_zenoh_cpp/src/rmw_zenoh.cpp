@@ -47,7 +47,6 @@
 #include "rcutils/types.h"
 
 #include "rmw/allocators.h"
-#include "rmw/dynamic_message_type_support.h"
 #include "rmw/error_handling.h"
 #include "rmw/features.h"
 #include "rmw/impl/cpp/macros.hpp"
@@ -143,10 +142,6 @@ bool rmw_feature_supported(rmw_feature_t feature)
       return true;
     case RMW_FEATURE_MESSAGE_INFO_RECEPTION_SEQUENCE_NUMBER:
       return true;
-    case RMW_MIDDLEWARE_SUPPORTS_TYPE_DISCOVERY:
-      return true;
-    case RMW_MIDDLEWARE_CAN_TAKE_DYNAMIC_MESSAGE:
-      return false;
     default:
       return false;
   }
@@ -462,14 +457,12 @@ rmw_create_publisher(
   free_topic_name.cancel();
   free_rmw_publisher.cancel();
 
-  if (TRACETOOLS_TRACEPOINT_ENABLED(rmw_publisher_init)) {
-    rmw_gid_t gid{};
-    // Trigger tracepoint even if we cannot get the GID
-    rmw_ret_t gid_ret = rmw_get_gid_for_publisher(rmw_publisher, &gid);
-    static_cast<void>(gid_ret);
-    TRACETOOLS_DO_TRACEPOINT(
-      rmw_publisher_init, static_cast<const void *>(rmw_publisher), gid.data);
-  }
+  rmw_gid_t gid{};
+  // Trigger tracepoint even if we cannot get the GID
+  rmw_ret_t gid_ret = rmw_get_gid_for_publisher(rmw_publisher, &gid);
+  static_cast<void>(gid_ret);
+  TRACEPOINT(
+    rmw_publisher_init, static_cast<const void *>(rmw_publisher), gid.data);
   return rmw_publisher;
 }
 
@@ -511,51 +504,6 @@ rmw_destroy_publisher(rmw_node_t * node, rmw_publisher_t * publisher)
   allocator->deallocate(const_cast<char *>(publisher->topic_name), allocator->state);
   allocator->deallocate(publisher, allocator->state);
   return RMW_RET_OK;
-}
-
-//==============================================================================
-rmw_ret_t
-rmw_take_dynamic_message(
-  const rmw_subscription_t * subscription,
-  rosidl_dynamic_typesupport_dynamic_data_t * dynamic_message,
-  bool * taken,
-  rmw_subscription_allocation_t * allocation)
-{
-  static_cast<void>(subscription);
-  static_cast<void>(dynamic_message);
-  static_cast<void>(taken);
-  static_cast<void>(allocation);
-  return RMW_RET_UNSUPPORTED;
-}
-
-//==============================================================================
-rmw_ret_t
-rmw_take_dynamic_message_with_info(
-  const rmw_subscription_t * subscription,
-  rosidl_dynamic_typesupport_dynamic_data_t * dynamic_message,
-  bool * taken,
-  rmw_message_info_t * message_info,
-  rmw_subscription_allocation_t * allocation)
-{
-  static_cast<void>(subscription);
-  static_cast<void>(dynamic_message);
-  static_cast<void>(taken);
-  static_cast<void>(message_info);
-  static_cast<void>(allocation);
-  return RMW_RET_UNSUPPORTED;
-}
-
-//==============================================================================
-rmw_ret_t
-rmw_serialization_support_init(
-  const char * serialization_lib_name,
-  rcutils_allocator_t * allocator,
-  rosidl_dynamic_typesupport_serialization_support_t * serialization_support)
-{
-  static_cast<void>(serialization_lib_name);
-  static_cast<void>(allocator);
-  static_cast<void>(serialization_support);
-  return RMW_RET_UNSUPPORTED;
 }
 
 //==============================================================================
@@ -783,9 +731,6 @@ rmw_publisher_wait_for_all_acked(
   const rmw_publisher_t * publisher,
   rmw_time_t wait_timeout)
 {
-  RMW_CHECK_FOR_NULL_WITH_MSG(
-    publisher, "publisher handle is null",
-    return RMW_RET_INVALID_ARGUMENT);
   static_cast<void>(publisher);
   static_cast<void>(wait_timeout);
 
@@ -932,6 +877,8 @@ rmw_create_subscription(
     return nullptr;
   }
 
+  // TODO(yadunund): Check if a duplicate entry for the same topic name + topic type
+  // is present in node_data->subscriptions and if so return error;
   RMW_CHECK_FOR_NULL_WITH_MSG(
     node->context,
     "expected initialized context",
@@ -1019,7 +966,7 @@ rmw_create_subscription(
   // the underlying zenoh objects, so there is no need to collect a GID here
   rmw_gid_t gid{};
   static_cast<void>(gid);
-  TRACETOOLS_TRACEPOINT(
+  TRACEPOINT(
     rmw_subscription_init, static_cast<const void *>(rmw_subscription), gid.data);
   return rmw_subscription;
 }
@@ -1165,12 +1112,9 @@ rmw_take(
     static_cast<rmw_zenoh_cpp::SubscriptionData *>(subscription->data);
   RMW_CHECK_ARGUMENT_FOR_NULL(sub_data, RMW_RET_INVALID_ARGUMENT);
 
-  if (!TRACETOOLS_TRACEPOINT_ENABLED(rmw_take)) {
-    return sub_data->take_one_message(ros_message, nullptr, taken);
-  }
   rmw_message_info_t message_info{};
   rmw_ret_t ret = sub_data->take_one_message(ros_message, &message_info, taken);
-  TRACETOOLS_DO_TRACEPOINT(
+  TRACEPOINT(
     rmw_take,
     static_cast<const void *>(subscription),
     static_cast<const void *>(ros_message),
@@ -1206,7 +1150,7 @@ rmw_take_with_info(
   RMW_CHECK_ARGUMENT_FOR_NULL(sub_data, RMW_RET_INVALID_ARGUMENT);
 
   rmw_ret_t ret = sub_data->take_one_message(ros_message, message_info, taken);
-  TRACETOOLS_TRACEPOINT(
+  TRACEPOINT(
     rmw_take,
     static_cast<const void *>(subscription),
     static_cast<const void *>(ros_message),
@@ -1307,12 +1251,13 @@ __rmw_take_serialized(
   RMW_CHECK_ARGUMENT_FOR_NULL(subscription, RMW_RET_INVALID_ARGUMENT);
   RMW_CHECK_ARGUMENT_FOR_NULL(subscription->topic_name, RMW_RET_ERROR);
   RMW_CHECK_ARGUMENT_FOR_NULL(subscription->data, RMW_RET_ERROR);
+  RMW_CHECK_ARGUMENT_FOR_NULL(serialized_message, RMW_RET_INVALID_ARGUMENT);
+  RMW_CHECK_ARGUMENT_FOR_NULL(taken, RMW_RET_INVALID_ARGUMENT);
+  RMW_CHECK_ARGUMENT_FOR_NULL(message_info, RMW_RET_INVALID_ARGUMENT);
   RMW_CHECK_TYPE_IDENTIFIERS_MATCH(
     subscription handle,
     subscription->implementation_identifier, rmw_zenoh_cpp::rmw_zenoh_identifier,
     return RMW_RET_INCORRECT_RMW_IMPLEMENTATION);
-  RMW_CHECK_ARGUMENT_FOR_NULL(serialized_message, RMW_RET_INVALID_ARGUMENT);
-  RMW_CHECK_ARGUMENT_FOR_NULL(taken, RMW_RET_INVALID_ARGUMENT);
   rmw_zenoh_cpp::SubscriptionData * sub_data =
     static_cast<rmw_zenoh_cpp::SubscriptionData *>(subscription->data);
   RMW_CHECK_ARGUMENT_FOR_NULL(sub_data, RMW_RET_INVALID_ARGUMENT);
@@ -1322,11 +1267,11 @@ __rmw_take_serialized(
     taken,
     message_info
   );
-  TRACETOOLS_TRACEPOINT(
+  TRACEPOINT(
     rmw_take,
     static_cast<const void *>(subscription),
     static_cast<const void *>(serialized_message),
-    (message_info ? message_info->source_timestamp : 0LL),
+    message_info->source_timestamp,
     *taken);
   return ret;
 }
@@ -1356,7 +1301,6 @@ rmw_take_serialized_message_with_info(
   rmw_message_info_t * message_info,
   rmw_subscription_allocation_t * allocation)
 {
-  RMW_CHECK_ARGUMENT_FOR_NULL(message_info, RMW_RET_INVALID_ARGUMENT);
   static_cast<void>(allocation);
 
   return __rmw_take_serialized(subscription, serialized_message, taken, message_info);
@@ -1683,6 +1627,7 @@ rmw_create_service(
   RMW_CHECK_ARGUMENT_FOR_NULL(qos_profile, nullptr);
   if (!qos_profile->avoid_ros_namespace_conventions) {
     int validation_result = RMW_TOPIC_VALID;
+    // TODO(francocipollone): Verify if this is the right way to validate the service name.
     rmw_ret_t ret = rmw_validate_full_topic_name(service_name, &validation_result, nullptr);
     if (RMW_RET_OK != ret) {
       return nullptr;
@@ -2359,11 +2304,6 @@ rmw_get_node_names(
   rcutils_string_array_t * node_namespaces)
 {
   RMW_CHECK_ARGUMENT_FOR_NULL(node, RMW_RET_INVALID_ARGUMENT);
-  RMW_CHECK_TYPE_IDENTIFIERS_MATCH(
-    node,
-    node->implementation_identifier,
-    rmw_zenoh_cpp::rmw_zenoh_identifier,
-    return RMW_RET_INCORRECT_RMW_IMPLEMENTATION);
   RMW_CHECK_ARGUMENT_FOR_NULL(node->context, RMW_RET_INVALID_ARGUMENT);
   RMW_CHECK_ARGUMENT_FOR_NULL(node->context->impl, RMW_RET_INVALID_ARGUMENT);
   RMW_CHECK_ARGUMENT_FOR_NULL(node_names, RMW_RET_INVALID_ARGUMENT);
@@ -2386,11 +2326,6 @@ rmw_get_node_names_with_enclaves(
   rcutils_string_array_t * enclaves)
 {
   RMW_CHECK_ARGUMENT_FOR_NULL(node, RMW_RET_INVALID_ARGUMENT);
-  RMW_CHECK_TYPE_IDENTIFIERS_MATCH(
-    node,
-    node->implementation_identifier,
-    rmw_zenoh_cpp::rmw_zenoh_identifier,
-    return RMW_RET_INCORRECT_RMW_IMPLEMENTATION);
   RMW_CHECK_ARGUMENT_FOR_NULL(node->context, RMW_RET_INVALID_ARGUMENT);
   RMW_CHECK_ARGUMENT_FOR_NULL(node->context->impl, RMW_RET_INVALID_ARGUMENT);
   RMW_CHECK_ARGUMENT_FOR_NULL(node_names, RMW_RET_INVALID_ARGUMENT);
@@ -2530,11 +2465,6 @@ rmw_ret_t
 rmw_get_gid_for_publisher(const rmw_publisher_t * publisher, rmw_gid_t * gid)
 {
   RMW_CHECK_ARGUMENT_FOR_NULL(publisher, RMW_RET_INVALID_ARGUMENT);
-  RMW_CHECK_TYPE_IDENTIFIERS_MATCH(
-    publisher,
-    publisher->implementation_identifier,
-    rmw_zenoh_cpp::rmw_zenoh_identifier,
-    return RMW_RET_INCORRECT_RMW_IMPLEMENTATION);
   RMW_CHECK_ARGUMENT_FOR_NULL(gid, RMW_RET_INVALID_ARGUMENT);
   rmw_node_t * node =
     static_cast<rmw_node_t *>(publisher->data);
@@ -2548,7 +2478,7 @@ rmw_get_gid_for_publisher(const rmw_publisher_t * publisher, rmw_gid_t * gid)
   RMW_CHECK_ARGUMENT_FOR_NULL(pub_data, RMW_RET_INVALID_ARGUMENT);
 
   gid->implementation_identifier = rmw_zenoh_cpp::rmw_zenoh_identifier;
-  memcpy(gid->data, pub_data->copy_gid().data(), RMW_GID_STORAGE_SIZE);
+  memcpy(gid->data, pub_data->copy_gid().data(), 16);
 
   return RMW_RET_OK;
 }
@@ -2559,18 +2489,13 @@ rmw_ret_t
 rmw_get_gid_for_client(const rmw_client_t * client, rmw_gid_t * gid)
 {
   RMW_CHECK_ARGUMENT_FOR_NULL(client, RMW_RET_INVALID_ARGUMENT);
-  RMW_CHECK_TYPE_IDENTIFIERS_MATCH(
-    client,
-    client->implementation_identifier,
-    rmw_zenoh_cpp::rmw_zenoh_identifier,
-    return RMW_RET_INCORRECT_RMW_IMPLEMENTATION);
   RMW_CHECK_ARGUMENT_FOR_NULL(gid, RMW_RET_INVALID_ARGUMENT);
   rmw_zenoh_cpp::ClientData * client_data =
     static_cast<rmw_zenoh_cpp::ClientData *>(client->data);
   RMW_CHECK_ARGUMENT_FOR_NULL(client_data, RMW_RET_INVALID_ARGUMENT);
 
   gid->implementation_identifier = rmw_zenoh_cpp::rmw_zenoh_identifier;
-  memcpy(gid->data, client_data->copy_gid().data(), RMW_GID_STORAGE_SIZE);
+  memcpy(gid->data, client_data->copy_gid().data(), 16);
 
   return RMW_RET_OK;
 }
@@ -2594,7 +2519,7 @@ rmw_compare_gids_equal(const rmw_gid_t * gid1, const rmw_gid_t * gid2, bool * re
     return RMW_RET_INCORRECT_RMW_IMPLEMENTATION);
   RMW_CHECK_ARGUMENT_FOR_NULL(result, RMW_RET_INVALID_ARGUMENT);
 
-  *result = memcmp(gid1->data, gid2->data, RMW_GID_STORAGE_SIZE) == 0;
+  *result = memcmp(gid1->data, gid2->data, 16) == 0;
 
   return RMW_RET_OK;
 }
@@ -2614,11 +2539,6 @@ rmw_service_server_is_available(
     rmw_zenoh_cpp::rmw_zenoh_identifier,
     return RMW_RET_INCORRECT_RMW_IMPLEMENTATION);
   RMW_CHECK_ARGUMENT_FOR_NULL(client, RMW_RET_INVALID_ARGUMENT);
-  RMW_CHECK_TYPE_IDENTIFIERS_MATCH(
-    client,
-    client->implementation_identifier,
-    rmw_zenoh_cpp::rmw_zenoh_identifier,
-    return RMW_RET_INCORRECT_RMW_IMPLEMENTATION);
   RMW_CHECK_ARGUMENT_FOR_NULL(client->data, RMW_RET_INVALID_ARGUMENT);
   RMW_CHECK_ARGUMENT_FOR_NULL(is_available, RMW_RET_INVALID_ARGUMENT);
   rmw_zenoh_cpp::ClientData * client_data =
