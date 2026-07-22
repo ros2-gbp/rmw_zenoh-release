@@ -2,72 +2,46 @@
 Changelog for package zenoh_cpp_vendor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-0.10.5 (2026-07-22)
--------------------
+0.6.7 (2026-07-22)
+------------------
+* Bump zenoh to 1.8.0 - 2nd attempt (`#965 <https://github.com/ros2/rmw_zenoh/issues/965>`_)
+* Revert 1.8.0 (`#961 <https://github.com/ros2/rmw_zenoh/issues/961>`_)
+* Build against rust >= 1.75 for ROS Lyrical (`#948 <https://github.com/ros2/rmw_zenoh/issues/948>`_)
+* Bump zenoh to 1.8.0 (`#939 <https://github.com/ros2/rmw_zenoh/issues/939>`_)
+* Allow use of non-vendored Zenoh if present (`#909 <https://github.com/ros2/rmw_zenoh/issues/909>`_)
+* Bump zenoh to 1.7.1 (`#872 <https://github.com/ros2/rmw_zenoh/issues/872>`_)
+* Fix REP url locations (`#859 <https://github.com/ros2/rmw_zenoh/issues/859>`_)
+* Contributors: Yuyuan Yuan, Julien Enoch, Shane Loretz, Denis Biryukov, Øystein Sture, Tim Clephas, mergify[bot]
 
-0.10.4 (2026-04-30)
--------------------
-* Use zenoh-cpp 481b71b fixing build with MSVC 2022 in C++20 mode (`#969 <https://github.com/ros2/rmw_zenoh/issues/969>`_)
+0.6.6 (2025-11-13)
+------------------
+* Bump zenoh to 1.6.2 (`#849 <https://github.com/ros2/rmw_zenoh/issues/849>`_)
 * Contributors: Julien Enoch
 
-0.10.3 (2026-04-14)
--------------------
+0.6.5 (2025-10-04)
+------------------
 
-* Bump Zenoh to 1.8.0, fix Windows shutdown hang, and resolve synchronization with ``undeclare`` (`#964 <https://github.com/ros2/rmw_zenoh/issues/964>`_)
-* Revert changes to build against rust >= 1.75 and bump zenoh to 1.8.0 (`#960 <https://github.com/ros2/rmw_zenoh/issues/960>`_)
-* Revert patch of Cargo.lock with new Zenoh commit due to Windows test failures (`#959 <https://github.com/ros2/rmw_zenoh/issues/959>`_)
-* Update Cargo.lock with new Zenoh commit (`#957 <https://github.com/ros2/rmw_zenoh/issues/957>`_)
-* Build against ``rust >= 1.75`` for ROS Lyrical (`#945 <https://github.com/ros2/rmw_zenoh/issues/945>`_)
-* Bump zenoh to 1.8.0 (`#935 <https://github.com/ros2/rmw_zenoh/issues/935>`_)
-* Allow use of non-vendored Zenoh if present (`#908 <https://github.com/ros2/rmw_zenoh/issues/908>`_)
-* Bump ``zenoh`` to 1.7.1 (`#870 <https://github.com/ros2/rmw_zenoh/issues/870>`_)
-
-* Contributors: Julien Enoch, Shane Loretz, Yuyuan Yuan, Øystein Sture
-
-0.10.2 (2025-11-18)
--------------------
-* Fix REP url locations (`#858 <https://github.com/ros2/rmw_zenoh/issues/858>`_)
-* Contributors: Tim Clephas
-
-0.10.1 (2025-11-12)
--------------------
-* Bump zenoh to 1.6.2 (`#842 <https://github.com/ros2/rmw_zenoh/issues/842>`_)
+0.6.4 (2025-09-10)
+------------------
+* Bump Zenoh to 1.5.1 (`#776 <https://github.com/ros2/rmw_zenoh/issues/776>`_)
 * Contributors: Julien Enoch
 
-0.10.0 (2025-10-04)
--------------------
-
-0.9.1 (2025-09-10)
+0.6.3 (2025-08-21)
 ------------------
-* Bump Zenoh to 1.5.1 (`#774 <https://github.com/ros2/rmw_zenoh/issues/774>`_)
+* Bump Zenoh to v1.5.0 (`#735 <https://github.com/ros2/rmw_zenoh/issues/735>`_)
+* Change zenoh-c features to use its default + shared-memory + transport_serial (`#715 <https://github.com/ros2/rmw_zenoh/issues/715>`_)
+* Contributors: ChenYing Kuo (CY), Julien Enoch, Yadunund, Yuyuan Yuan
+
+0.6.2 (2025-06-18)
+------------------
+* Bump Zenoh to 1.4.0 (`#657 <https://github.com/ros2/rmw_zenoh/issues/657>`_)
 * Contributors: Julien Enoch
 
-0.9.0 (2025-08-21)
+0.6.1 (2025-05-20)
 ------------------
-* Bump Zenoh to v1.5.0 (`#728 <https://github.com/ros2/rmw_zenoh/issues/728>`_)
-* Contributors: ChenYing Kuo (CY), Julien Enoch, Yuyuan Yuan
-
-0.8.2 (2025-07-29)
-------------------
-* Change zenoh-c features to use its default + shared-memory + transport_serial (`#692 <https://github.com/ros2/rmw_zenoh/issues/692>`_)
-* Contributors: Julien Enoch
-
-0.8.1 (2025-07-01)
-------------------
-
-0.8.0 (2025-06-18)
-------------------
-* Bump Zenoh to 1.4.0 (`#652 <https://github.com/ros2/rmw_zenoh/issues/652>`_)
-* Contributors: Julien Enoch
-
-0.7.1 (2025-05-19)
-------------------
-* fix: pin rust toolchain to v1.75.0 (`#602 <https://github.com/ros2/rmw_zenoh/issues/602>`_)
-* fix: use the right commit to bump zenoh to v1.3.2 (`#607 <https://github.com/ros2/rmw_zenoh/issues/607>`_)
+* fix: pin rust toolchain to v1.75.0 (`#634 <https://github.com/ros2/rmw_zenoh/issues/634>`_)
+* fix: use the right commit to bump zenoh to v1.3.2 (`#631 <https://github.com/ros2/rmw_zenoh/issues/631>`_)
 * Contributors: Yadunund, Yuyuan Yuan
-
-0.7.0 (2025-04-24)
-------------------
 
 0.6.0 (2025-04-18)
 ------------------

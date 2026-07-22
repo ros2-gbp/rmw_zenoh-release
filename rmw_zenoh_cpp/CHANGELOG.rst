@@ -2,105 +2,71 @@
 Changelog for package rmw_zenoh_cpp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-0.10.5 (2026-07-22)
--------------------
-* Fix transient-local publishing for buffer-aware path (`#1011 <https://github.com/ros2/rmw_zenoh/issues/1011>`_)
-* fix: Fix lock order inversion / deadlock (`#1010 <https://github.com/ros2/rmw_zenoh/issues/1010>`_)
-* Add support for rosidl::Buffer-aware per-endpoint pub/sub (`#987 <https://github.com/ros2/rmw_zenoh/issues/987>`_)
-* Contributors: CY Chen, Janosch Machowinski, Yuyuan Yuan
-
-0.10.4 (2026-04-30)
--------------------
-
-0.10.3 (2026-04-14)
--------------------
-
-* Bump Zenoh to 1.8.0, fix Windows shutdown hang, and resolve synchronization with ``undeclare`` (`#964 <https://github.com/ros2/rmw_zenoh/issues/964>`_)
-* Revert changes to build against rust >= 1.75 and bump zenoh to 1.8.0 (`#960 <https://github.com/ros2/rmw_zenoh/issues/960>`_)
-* Prevent deadlock by not holding both locks when processing event data (`#937 <https://github.com/ros2/rmw_zenoh/issues/937>`_)
-* Bump zenoh to 1.8.0 (`#935 <https://github.com/ros2/rmw_zenoh/issues/935>`_)
-* Explicitly set `false` for the content filtering feature (`#938 <https://github.com/ros2/rmw_zenoh/issues/938>`_)
-* Add deadline/liveliness QoS events to ``rmw_zenoh_cpp`` (`#934 <https://github.com/ros2/rmw_zenoh/issues/934>`_)
-* Catch ``PackageNotFoundError`` during default config URI loading to prevent crash (`#915 <https://github.com/ros2/rmw_zenoh/issues/915>`_)
-* Populate ``reception_sequence_number`` and ``advertise_sequence_number`` features (`#920 <https://github.com/ros2/rmw_zenoh/issues/920>`_)
-* Use ``get_package_share_path`` (`#913 <https://github.com/ros2/rmw_zenoh/issues/913>`_)
-* Address outstanding TODO items (`#896 <https://github.com/ros2/rmw_zenoh/issues/896>`_)
-* Expose zenoh session (`#865 <https://github.com/ros2/rmw_zenoh/issues/865>`_)
-* Fix config loading with incorrect path variable (`#898 <https://github.com/ros2/rmw_zenoh/issues/898>`_)
-* Fix build binary workflow (`#895 <https://github.com/ros2/rmw_zenoh/issues/895>`_)
-* Fix line ending in session open error message (`#888 <https://github.com/ros2/rmw_zenoh/issues/888>`_)
-* Update deprecated ``ament_index_cpp`` API (`#879 <https://github.com/ros2/rmw_zenoh/issues/879>`_)
-* Remove ``default`` from switch with enum to enable compiler warnings (`#871 <https://github.com/ros2/rmw_zenoh/issues/871>`_)
-* Use shared SHM transport provider instead of creating a new instance (`#857 <https://github.com/ros2/rmw_zenoh/issues/857>`_)
-* Bump ``zenoh`` to 1.7.1 (`#870 <https://github.com/ros2/rmw_zenoh/issues/870>`_)
-
-* Contributors: Alejandro Hernández Cordero, Hervé Audren, Julien Enoch, Nikola Banović, Shane Loretz, Skyler Medeiros, Tomoya Fujita, Yuyuan Yuan, jordanburklund, yellowhatter
-
-0.10.2 (2025-11-18)
--------------------
-* Add rmw_get_clients_info_by_service and rmw_get_servers_info_by_service (`#679 <https://github.com/ros2/rmw_zenoh/issues/679>`_)
-* Fix REP url locations (`#858 <https://github.com/ros2/rmw_zenoh/issues/858>`_)
-* Contributors: Minju, Lee, Tim Clephas
-
-0.10.1 (2025-11-12)
--------------------
-* Restore ZENOH_CONFIG_OVERRIDE after isolation is finished (`#855 <https://github.com/ros2/rmw_zenoh/issues/855>`_)
-* Fix typo in 'triggered' (`#844 <https://github.com/ros2/rmw_zenoh/issues/844>`_)
-* Log details at SHM creation (alloc and threashold sizes) (`#835 <https://github.com/ros2/rmw_zenoh/issues/835>`_)
-* Contributors: Alejandro Hernandez Cordero, Christophe Bedard, Julien Enoch, Scott K Logan
-
-0.10.0 (2025-10-04)
--------------------
-* Change default value of ZENOH_SHM_ALLOC_SIZE to 48 MiB (`#830 <https://github.com/ros2/rmw_zenoh/issues/830>`_)
-* config: increase queries_default_timeout to 10min (`#820 <https://github.com/ros2/rmw_zenoh/issues/820>`_)
-* Fix compile with clang (`#819 <https://github.com/ros2/rmw_zenoh/issues/819>`_)
-* feat(logging): add contextual information to log messages (`#809 <https://github.com/ros2/rmw_zenoh/issues/809>`_)
-* Align the config with upstream Zenoh. (`#785 <https://github.com/ros2/rmw_zenoh/issues/785>`_)
-* fix: resolve memory leak when publishing with the default allocator (`#797 <https://github.com/ros2/rmw_zenoh/issues/797>`_)
-* Contributors: ChenYing Kuo (CY), Julien Enoch, Yuyuan Yuan, Yadunund
-
-0.9.1 (2025-09-10)
+0.6.7 (2026-07-22)
 ------------------
-* Recycle serialization buffers on transmission (`#342 <https://github.com/ros2/rmw_zenoh/issues/342>`_)
-* refactor: avoid redundant key expression creation when replying (`#732 <https://github.com/ros2/rmw_zenoh/issues/732>`_)
+* fix: Fix lock order inversion / deadlock (`#1013 <https://github.com/ros2/rmw_zenoh/issues/1013>`_)
+* Bump zenoh to 1.8.0 - 2nd attempt (`#965 <https://github.com/ros2/rmw_zenoh/issues/965>`_)
+* Revert 1.8.0 (`#961 <https://github.com/ros2/rmw_zenoh/issues/961>`_)
+* Don't hold both locks when processing event data (`#952 <https://github.com/ros2/rmw_zenoh/issues/952>`_)
+* fix(event): add deadline/liveliness QoS events to rmw_zenoh_cpp (`#942 <https://github.com/ros2/rmw_zenoh/issues/942>`_)
+* Bump zenoh to 1.8.0 (`#939 <https://github.com/ros2/rmw_zenoh/issues/939>`_)
+* fix: populate reception_sequence_number and advertise sequence number features (`#922 <https://github.com/ros2/rmw_zenoh/issues/922>`_)
+* finish some TODOs. (`#903 <https://github.com/ros2/rmw_zenoh/issues/903>`_)
+* feat: expose zenoh session (`#899 <https://github.com/ros2/rmw_zenoh/issues/899>`_)
+* Fix line ending in session open error message (`#890 <https://github.com/ros2/rmw_zenoh/issues/890>`_)
+* Use shared transport SHM provider instead of own instance of SHM provider (`#875 <https://github.com/ros2/rmw_zenoh/issues/875>`_)
+* Bump zenoh to 1.7.1 (`#872 <https://github.com/ros2/rmw_zenoh/issues/872>`_)
+* Fix REP url locations (`#859 <https://github.com/ros2/rmw_zenoh/issues/859>`_)
+* Restore ZENOH_CONFIG_OVERRIDE after isolation is finished (`#856 <https://github.com/ros2/rmw_zenoh/issues/856>`_)
+* Contributors: Janosch Machowinski, Yuyuan Yuan, Julien Enoch, Shane Loretz, Hervé Audren, Denis Biryukov, Tomoya Fujita, Yadunund, jordanburklund, yellowhatter, Tim Clephas, Scott K Logan, Alejandro Hernandez Cordero
+
+0.6.6 (2025-11-13)
+------------------
+* Fix typo in 'triggered' (`#846 <https://github.com/ros2/rmw_zenoh/issues/846>`_)
+* Log details at SHM creation (alloc and threashold sizes) (`#836 <https://github.com/ros2/rmw_zenoh/issues/836>`_)
+* Contributors: Alejandro Hernandez Cordero, Christophe Bedard, Julien Enoch
+
+0.6.5 (2025-10-04)
+------------------
+* Change default value of ZENOH_SHM_ALLOC_SIZE to 48 MiB (`#831 <https://github.com/ros2/rmw_zenoh/issues/831>`_)
+* Fix compile with clang (`#821 <https://github.com/ros2/rmw_zenoh/issues/821>`_)
+* config: increase queries_default_timeout to 10min (`#824 <https://github.com/ros2/rmw_zenoh/issues/824>`_)
+* feat(logging): add contextual information to log messages (`#811 <https://github.com/ros2/rmw_zenoh/issues/811>`_)
+* Align the config with upstream Zenoh. (`#803 <https://github.com/ros2/rmw_zenoh/issues/803>`_)
+* fix: resolve memory leak when publishing with the default allocator (`#799 <https://github.com/ros2/rmw_zenoh/issues/799>`_)
+* Contributors: ChenYing Kuo (CY), Julien Enoch, Yadunund, Yuyuan Yuan
+
+0.6.4 (2025-09-10)
+------------------
+* Recycle serialization buffers on transmission (`#766 <https://github.com/ros2/rmw_zenoh/issues/766>`_)
+* refactor: avoid redundant key expression creation when replying (`#754 <https://github.com/ros2/rmw_zenoh/issues/754>`_)
 * Contributors: Chris Lalancette, Yadunund, Mahmoud Mazouz, Yuyuan Yuan, Julien Enoch
 
-0.9.0 (2025-08-21)
+0.6.3 (2025-08-21)
 ------------------
-* Do not include rosidl_typesupport\_{c,cpp} in rmw impl typesupport list (`#748 <https://github.com/ros2/rmw_zenoh/issues/748>`_)
-* fixing typo flow to flows in config files (`#740 <https://github.com/ros2/rmw_zenoh/issues/740>`_)
-* Shared Memory on C++ API (`#363 <https://github.com/ros2/rmw_zenoh/issues/363>`_)
-* Bump Zenoh to v1.5.0 (`#728 <https://github.com/ros2/rmw_zenoh/issues/728>`_)
-* Contributors: ChenYing Kuo (CY), Christophe Bedard, Faseel Chemmadan, Julien Enoch, milidam, Steven Palma, Yadunund, yellowhatter, Yuyuan Yuan
+* fixing typo flow to flows in config files (`#745 <https://github.com/ros2/rmw_zenoh/issues/745>`_)
+* Shared Memory on C++ API (`#741 <https://github.com/ros2/rmw_zenoh/issues/741>`_)
+* Bump Zenoh to v1.5.0 (`#735 <https://github.com/ros2/rmw_zenoh/issues/735>`_)
+* rmw_zenoh_cpp: Include algorithm for std::find_if (`#725 <https://github.com/ros2/rmw_zenoh/issues/725>`_)
+* Use rfind to avoid issues with service types ending in Request or Response (`#720 <https://github.com/ros2/rmw_zenoh/issues/720>`_)
+* Remove the extra copy on the publisher side (`#712 <https://github.com/ros2/rmw_zenoh/issues/712>`_)
+* Avoid ambiguity with variable shadowing (`#707 <https://github.com/ros2/rmw_zenoh/issues/707>`_)
+* Only configure the timeout of the action-related service `get_result` to maximum value. (`#701 <https://github.com/ros2/rmw_zenoh/issues/701>`_)
+* Use Zenoh Querier to replace Session.get (`#697 <https://github.com/ros2/rmw_zenoh/issues/697>`_)
+* Contributors: ChenYing Kuo (CY), Christophe Bedard, Faseel Chemmadan, Filip, Jan Vermaete, Julien Enoch, milidam, Steven Palma, Yadunund, yellowhatter, Yuyuan Yuan
 
-0.8.2 (2025-07-29)
+0.6.2 (2025-06-18)
 ------------------
-* rmw_zenoh_cpp: Include algorithm for std::find_if (`#723 <https://github.com/ros2/rmw_zenoh/issues/723>`_)
-* Use rfind to avoid issues with service types ending in Request or Response (`#719 <https://github.com/ros2/rmw_zenoh/issues/719>`_)
-* Remove the extra copy on the publisher side (`#711 <https://github.com/ros2/rmw_zenoh/issues/711>`_)
-* Avoid ambiguity with variable shadowing (`#706 <https://github.com/ros2/rmw_zenoh/issues/706>`_)
-* Only configure the timeout of the action-related service `get_result` to maximum value. (`#685 <https://github.com/ros2/rmw_zenoh/issues/685>`_)
-* Use Zenoh Querier to replace Session.get (`#694 <https://github.com/ros2/rmw_zenoh/issues/694>`_)
-* Contributors: ChenYing Kuo (CY), Filip, Jan Vermaete, yadunund
-
-0.8.1 (2025-07-01)
-------------------
-
-0.8.0 (2025-06-18)
-------------------
-* Use data() to avoid potentially dereferencing an empty vector (`#667 <https://github.com/ros2/rmw_zenoh/issues/667>`_)
-* Bump Zenoh to 1.4.0 (`#652 <https://github.com/ros2/rmw_zenoh/issues/652>`_)
+* Use data() to avoid potentially dereferencing an empty vector (`#668 <https://github.com/ros2/rmw_zenoh/issues/668>`_)
+* Bump Zenoh to 1.4.0 (`#657 <https://github.com/ros2/rmw_zenoh/issues/657>`_)
 * Contributors: Julien Enoch, Øystein Sture
 
-0.7.1 (2025-05-19)
+0.6.1 (2025-05-20)
 ------------------
-* fix(comment): correct the QoS incompatibilities (`#644 <https://github.com/ros2/rmw_zenoh/issues/644>`_)
-* fix rmw_take_serialized_message. (`#638 <https://github.com/ros2/rmw_zenoh/issues/638>`_)
-* Update CMakeLists.txt (`#617 <https://github.com/ros2/rmw_zenoh/issues/617>`_)
-* Contributors: Alejandro Hernández Cordero, Tomoya Fujita, Yuyuan Yuan, mosfet80
-
-0.7.0 (2025-04-24)
-------------------
+* fix(comment): correct the QoS incompatibilities (`#645 <https://github.com/ros2/rmw_zenoh/issues/645>`_)
+* fix rmw_take_serialized_message. (`#639 <https://github.com/ros2/rmw_zenoh/issues/639>`_)
+* Update CMakeLists.txt (`#622 <https://github.com/ros2/rmw_zenoh/issues/622>`_)
+* Contributors: Alejandro Hernández Cordero, mosfet80, Tomoya Fujita
 
 0.6.0 (2025-04-18)
 ------------------

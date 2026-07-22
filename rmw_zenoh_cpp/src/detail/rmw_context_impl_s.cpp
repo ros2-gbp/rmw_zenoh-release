@@ -29,8 +29,6 @@
 
 #include <zenoh.hxx>
 
-#include "buffer_backend_context.hpp"
-#include "buffer_backend_loader.hpp"
 #include "graph_cache.hpp"
 #include "guard_condition.hpp"
 #include "identifier.hpp"
@@ -93,10 +91,6 @@ public:
       return RMW_RET_ERROR;
     }
 
-    if (buffer_backend_context_) {
-      rmw_zenoh_cpp::shutdown_buffer_backends(*buffer_backend_context_);
-    }
-
     // Explicitly close the session before releasing our shared_ptr reference.
     // This calls wait_callbacks() internally (since zenoh commit e5db0ce), which waits
     // for all in-flight callbacks to finish. We call close() here while node-level entities
@@ -155,11 +149,6 @@ public:
   std::shared_ptr<rmw_zenoh_cpp::BufferPool> serialization_buffer_pool()
   {
     return serialization_buffer_pool_;
-  }
-
-  rmw_zenoh_cpp::BufferBackendContext * buffer_backend_context()
-  {
-    return buffer_backend_context_.get();
   }
 
   bool create_node_data(
@@ -482,10 +471,6 @@ private:
 
     // Initialize the serialization buffer pool.
     serialization_buffer_pool_ = std::make_shared<rmw_zenoh_cpp::BufferPool>();
-
-    // Initialize the buffer backend context.
-    buffer_backend_context_ = std::make_unique<rmw_zenoh_cpp::BufferBackendContext>();
-    rmw_zenoh_cpp::initialize_buffer_backends(*buffer_backend_context_);
   }
 
   void init()
@@ -561,8 +546,6 @@ private:
   std::unordered_map<const rmw_node_t *, std::shared_ptr<rmw_zenoh_cpp::NodeData>> nodes_;
 
   zenoh::KeyExpr liveliness_keyexpr_;
-
-  std::unique_ptr<rmw_zenoh_cpp::BufferBackendContext> buffer_backend_context_;
 };
 
 ///=============================================================================
@@ -637,12 +620,6 @@ std::shared_ptr<rmw_zenoh_cpp::GraphCache> rmw_context_impl_s::graph_cache()
 std::shared_ptr<rmw_zenoh_cpp::BufferPool> rmw_context_impl_s::serialization_buffer_pool()
 {
   return data_->serialization_buffer_pool();
-}
-
-///=============================================================================
-rmw_zenoh_cpp::BufferBackendContext * rmw_context_impl_s::buffer_backend_context()
-{
-  return data_->buffer_backend_context();
 }
 
 ///=============================================================================

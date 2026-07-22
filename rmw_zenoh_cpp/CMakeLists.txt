@@ -19,7 +19,6 @@ find_package(fastcdr CONFIG REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(rcpputils REQUIRED)
 find_package(rcutils REQUIRED)
-find_package(rosidl_buffer_backend_registry REQUIRED)
 find_package(rosidl_typesupport_fastrtps_c REQUIRED)
 find_package(rosidl_typesupport_fastrtps_cpp REQUIRED)
 find_package(rmw REQUIRED)
@@ -28,7 +27,6 @@ find_package(tracetools REQUIRED)
 find_package(zenoh_cpp_vendor REQUIRED)
 
 add_library(rmw_zenoh_cpp SHARED
-  src/detail/buffer_backend_loader.cpp
   src/detail/attachment_helpers.cpp
   src/detail/cdr.cpp
   src/detail/event.cpp
@@ -54,7 +52,6 @@ add_library(rmw_zenoh_cpp SHARED
   src/rmw_event.cpp
   src/rmw_get_network_flow_endpoints.cpp
   src/rmw_get_node_info_and_types.cpp
-  src/rmw_get_service_endpoint_info.cpp
   src/rmw_get_service_names_and_types.cpp
   src/rmw_get_topic_endpoint_info.cpp
   src/rmw_get_topic_names_and_types.cpp
@@ -70,7 +67,6 @@ target_link_libraries(rmw_zenoh_cpp
     fastcdr
     rcpputils::rcpputils
     rcutils::rcutils
-    rosidl_buffer_backend_registry::rosidl_buffer_backend_registry
     rosidl_typesupport_fastrtps_c::rosidl_typesupport_fastrtps_c
     rosidl_typesupport_fastrtps_cpp::rosidl_typesupport_fastrtps_cpp
     rmw::rmw
@@ -79,11 +75,6 @@ target_link_libraries(rmw_zenoh_cpp
 )
 
 configure_rmw_library(rmw_zenoh_cpp)
-
-target_include_directories(rmw_zenoh_cpp
-  PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-)
 
 target_include_directories(rmw_zenoh_cpp PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -119,8 +110,8 @@ target_link_libraries(rmw_zenoh_cpp_test_fixture
 ament_export_targets(export_rmw_zenoh_cpp)
 
 register_rmw_implementation(
-  "c:rosidl_typesupport_fastrtps_c:rosidl_typesupport_introspection_c"
-  "cpp:rosidl_typesupport_fastrtps_cpp:rosidl_typesupport_introspection_cpp")
+  "c:rosidl_typesupport_c:rosidl_typesupport_fastrtps_c:rosidl_typesupport_introspection_c"
+  "cpp:rosidl_typesupport_cpp:rosidl_typesupport_fastrtps_cpp:rosidl_typesupport_introspection_cpp")
 
 if(BUILD_TESTING)
   find_package(ament_cmake_copyright REQUIRED)
