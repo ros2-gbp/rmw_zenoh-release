@@ -57,6 +57,8 @@
 
 #include "tracetools/tracetools.h"
 
+#include "rmw_zenoh_cpp/rmw_zenoh.hpp"
+
 namespace
 {
 //==============================================================================
@@ -137,9 +139,9 @@ bool rmw_feature_supported(rmw_feature_t feature)
 {
   switch (feature) {
     case RMW_FEATURE_MESSAGE_INFO_PUBLICATION_SEQUENCE_NUMBER:
-      return false;
+      return true;
     case RMW_FEATURE_MESSAGE_INFO_RECEPTION_SEQUENCE_NUMBER:
-      return false;
+      return true;
     default:
       return false;
   }
@@ -567,7 +569,7 @@ rmw_publish(
 
   return pub_data->publish(
     ros_message,
-    context_impl->shm()
+    context_impl->shm().get()
   );
 }
 
@@ -675,7 +677,7 @@ rmw_publish_serialized_message(
 
   return publisher_data->publish_serialized_message(
     serialized_message,
-    context_impl->shm()
+    context_impl->shm().get()
   );
 }
 
@@ -2158,13 +2160,27 @@ rmw_wait(
   // a valid pointer.
 
   {
-    // Take the lock before the check_and_attach_condition to ensure conditions and flags
-    // are not modified while being checked by concurrent calls.
+    // reset the trigger prior to attaching any entities
     std::unique_lock<std::mutex> lock(wait_set_data->condition_mutex);
+    wait_set_data->triggered = false;
+  }
 
+  {
+    // We explicitly do not lock the condition_mutex here
+    // This is fine, as the attachment returns atomically is a signal was ready
+    // If anything triggers after that point, wait_set_data->triggered will be set
+    // to true under mutex.
+    // Note taking the mutex here leads to a deadlock.
     bool skip_wait = check_and_attach_condition(
       subscriptions, guard_conditions, services, clients, events, wait_set_data);
+
+
     if (!skip_wait) {
+      // now it is safe to take the lock
+      // if wait_set_data->triggered was set to true in between,
+      // the wait on the conditional will instantly return.
+      std::unique_lock<std::mutex> lock(wait_set_data->condition_mutex);
+
       // According to the RMW documentation, if wait_timeout is NULL that means
       // "wait forever", if it specified as 0 it means "never wait", and if it is anything else wait
       // for that amount of time.
@@ -2181,12 +2197,6 @@ rmw_wait(
             [wait_set_data]() {return wait_set_data->triggered;});
         }
       }
-
-      // It is important to reset this here while still holding the lock, otherwise every subsequent
-      // call to rmw_wait() will be immediately ready.  We could handle this another way by making
-      // "triggered" a stack variable in this function and "attaching" it during
-      // "check_and_attach_condition", but that isn't clearly better so leaving this.
-      wait_set_data->triggered = false;
     }
   }
 
@@ -2621,3 +2631,23 @@ rmw_client_set_on_new_response_callback(
   return RMW_RET_OK;
 }
 }  // extern "C"
+
+//==============================================================================
+/// Get the Zenoh session associated with the given RMW context.
+const std::shared_ptr<zenoh::Session>
+rmw_zenoh_get_session(const rmw_context_t * context)
+{
+  RMW_CHECK_ARGUMENT_FOR_NULL(context, nullptr);
+  RMW_CHECK_TYPE_IDENTIFIERS_MATCH(
+    context,
+    context->implementation_identifier,
+    rmw_zenoh_cpp::rmw_zenoh_identifier,
+    return nullptr);
+  RMW_CHECK_FOR_NULL_WITH_MSG(
+    context->impl,
+    "expected initialized context",
+    return nullptr);
+  rmw_context_impl_s * context_impl = static_cast<rmw_context_impl_s *>(
+    context->impl);
+  return context_impl->session();
+}

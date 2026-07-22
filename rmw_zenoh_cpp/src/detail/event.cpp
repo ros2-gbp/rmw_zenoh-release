@@ -33,7 +33,10 @@ static const std::unordered_map<rmw_event_type_t, rmw_zenoh_cpp::rmw_zenoh_event
   {RMW_EVENT_REQUESTED_QOS_INCOMPATIBLE, rmw_zenoh_cpp::ZENOH_EVENT_REQUESTED_QOS_INCOMPATIBLE},
   {RMW_EVENT_OFFERED_QOS_INCOMPATIBLE, rmw_zenoh_cpp::ZENOH_EVENT_OFFERED_QOS_INCOMPATIBLE},
   {RMW_EVENT_MESSAGE_LOST, rmw_zenoh_cpp::ZENOH_EVENT_MESSAGE_LOST},
-  // TODO(clalancette): Implement remaining events
+  {RMW_EVENT_LIVELINESS_CHANGED, rmw_zenoh_cpp::ZENOH_EVENT_LIVELINESS_CHANGED},
+  {RMW_EVENT_LIVELINESS_LOST, rmw_zenoh_cpp::ZENOH_EVENT_LIVELINESS_LOST},
+  {RMW_EVENT_REQUESTED_DEADLINE_MISSED, rmw_zenoh_cpp::ZENOH_EVENT_REQUESTED_DEADLINE_MISSED},
+  {RMW_EVENT_OFFERED_DEADLINE_MISSED, rmw_zenoh_cpp::ZENOH_EVENT_OFFERED_DEADLINE_MISSED},
 };
 }  // namespace
 
@@ -245,10 +248,11 @@ void EventsManager::notify_event(rmw_zenoh_event_type_t event_id)
   }
 
   std::lock_guard<std::mutex> lock(event_condition_mutex_);
-  if (wait_set_data_[event_id] != nullptr) {
-    std::lock_guard<std::mutex> wait_set_lock(wait_set_data_[event_id]->condition_mutex);
-    wait_set_data_[event_id]->triggered = true;
-    wait_set_data_[event_id]->condition_variable.notify_one();
+  auto * wait_set_data = wait_set_data_[event_id];
+  if (wait_set_data != nullptr) {
+    std::lock_guard<std::mutex> wait_set_lock(wait_set_data->condition_mutex);
+    wait_set_data->triggered = true;
+    wait_set_data->condition_variable.notify_one();
   }
 }
 }  // namespace rmw_zenoh_cpp
