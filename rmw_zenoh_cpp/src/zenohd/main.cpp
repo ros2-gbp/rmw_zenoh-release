@@ -13,10 +13,9 @@
 // limitations under the License.
 
 #include <condition_variable>
-#include <iostream>
+#include <cstdio>
 #include <mutex>
-#include <optional>
-#include <utility>
+#include <stdexcept>
 
 #include <zenoh.hxx>
 #include <zenoh/api/session.hxx>

@@ -26,13 +26,12 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#include <cstddef>
 #include <cstdint>
 #include <iostream>
-#include <optional>
-#include <stdexcept>
 #include <string>
 #include <vector>
+#include <optional>
+#include <sstream>
 
 #include "config_generator.hpp"
 

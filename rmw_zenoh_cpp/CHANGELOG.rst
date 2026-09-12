@@ -2,30 +2,25 @@
 Changelog for package rmw_zenoh_cpp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-0.13.0 (2026-09-11)
+0.10.6 (2026-09-11)
 -------------------
-* Granular rclcpp/rclcpp.gpp and include what you use (`#1043 <https://github.com/ros2/rmw_zenoh/issues/1043>`_)
-* Return topic info by const reference (`#1053 <https://github.com/ros2/rmw_zenoh/issues/1053>`_)
-* Remove unnecessary topic info locks (`#1048 <https://github.com/ros2/rmw_zenoh/issues/1048>`_)
-* Add rmw_zenoh_cpp to zenoh_cpp_vendor runtime dep (`#1044 <https://github.com/ros2/rmw_zenoh/issues/1044>`_)
-* Do not update wait_set_data triggered flag outside of mutex lock (`#1036 <https://github.com/ros2/rmw_zenoh/issues/1036>`_)
-* When SHM enabled, enable transport_optimization (`#1020 <https://github.com/ros2/rmw_zenoh/issues/1020>`_)
-* return early when unable to find any topic endpoints. (`#1017 <https://github.com/ros2/rmw_zenoh/issues/1017>`_)
-* Contributors: Alejandro Hernández Cordero, Julien Enoch, Maurice Alexander Purnawan, Scott K Logan, Tomoya Fujita, Yadunund
+* Return topic info by const reference (`#1055 <https://github.com/ros2/rmw_zenoh/issues/1055>`_)
+* Remove unnecessary topic info locks (`#1049 <https://github.com/ros2/rmw_zenoh/issues/1049>`_)
+* Add rmw_zenoh_cpp to zenoh_cpp_vendor runtime dep (`#1045 <https://github.com/ros2/rmw_zenoh/issues/1045>`_)
+* Do not update wait_set_data triggered flag outside of mutex lock (`#1038 <https://github.com/ros2/rmw_zenoh/issues/1038>`_)
+* When SHM enabled, enable transport_optimization (`#1021 <https://github.com/ros2/rmw_zenoh/issues/1021>`_)
+* return early when unable to find any topic endpoints. (`#1019 <https://github.com/ros2/rmw_zenoh/issues/1019>`_)
+* return early with a zero-initialized array. (`#1018 <https://github.com/ros2/rmw_zenoh/issues/1018>`_)
+* Contributors: Julien Enoch, Maurice Alexander Purnawan, Scott K Logan, Tomoya Fujita, Yadunund
 
-0.12.0 (2026-07-22)
+0.10.5 (2026-07-22)
 -------------------
-* return early with a zero-initialized array. (`#1012 <https://github.com/ros2/rmw_zenoh/issues/1012>`_)
-* Fix transient-local publishing for buffer-aware path (`#1009 <https://github.com/ros2/rmw_zenoh/issues/1009>`_)
-* Make use of `ServiceData::is_shutdown()` when possible (`#997 <https://github.com/ros2/rmw_zenoh/issues/997>`_)
-* Fix lock order inversion in rmw_wait (`#1005 <https://github.com/ros2/rmw_zenoh/issues/1005>`_)
-* fix(publisher): unify publisher ownership to fix debug-mode crash (`#990 <https://github.com/ros2/rmw_zenoh/issues/990>`_)
-* use C++ 20 in default. (`#1006 <https://github.com/ros2/rmw_zenoh/issues/1006>`_)
-* Fix deadlock between wait_set condition_mutex and entity-specific mutexes (`#992 <https://github.com/ros2/rmw_zenoh/issues/992>`_)
-* Add support for rosidl::Buffer-aware per-endpoint pub/sub (`#930 <https://github.com/ros2/rmw_zenoh/issues/930>`_)
-* Contributors: Alejandro Hernandez Cordero, CY Chen, Janosch Machowinski, Patrick Roncagliolo, Tomoya Fujita, Yuyuan Yuan, Yadunund
+* Fix transient-local publishing for buffer-aware path (`#1011 <https://github.com/ros2/rmw_zenoh/issues/1011>`_)
+* fix: Fix lock order inversion / deadlock (`#1010 <https://github.com/ros2/rmw_zenoh/issues/1010>`_)
+* Add support for rosidl::Buffer-aware per-endpoint pub/sub (`#987 <https://github.com/ros2/rmw_zenoh/issues/987>`_)
+* Contributors: CY Chen, Janosch Machowinski, Yuyuan Yuan
 
-0.11.0 (2026-05-07)
+0.10.4 (2026-04-30)
 -------------------
 
 0.10.3 (2026-04-14)
