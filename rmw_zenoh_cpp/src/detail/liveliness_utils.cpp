@@ -15,12 +15,17 @@
 #include "liveliness_utils.hpp"
 
 #include <algorithm>
+#include <array>
+#include <cerrno>
+#include <cstddef>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
 #include <functional>
 #include <limits>
+#include <memory>
 #include <optional>
-#include <random>
 #include <sstream>
-#include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
@@ -805,7 +810,7 @@ NodeInfo Entity::node_info() const
 }
 
 ///=============================================================================
-std::optional<TopicInfo> Entity::topic_info() const
+const std::optional<TopicInfo> & Entity::topic_info() const
 {
   return this->topic_info_;
 }

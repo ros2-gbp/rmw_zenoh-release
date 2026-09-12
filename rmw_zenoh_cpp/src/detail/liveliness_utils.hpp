@@ -24,7 +24,6 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
-#include <vector>
 
 #include <zenoh.hxx>
 
@@ -169,8 +168,8 @@ public:
   /// Get the NodeInfo.
   NodeInfo node_info() const;
 
-  /// Get the TopicInfo if present.
-  std::optional<TopicInfo> topic_info() const;
+  /// Get the immutable TopicInfo owned by this Entity, if present.
+  const std::optional<TopicInfo> & topic_info() const;
 
   /// Get the liveliness keyexpr for this entity.
   std::string liveliness_keyexpr() const;
