@@ -17,7 +17,10 @@
 #include <fastcdr/FastBuffer.h>
 
 #include <array>
-#include <cinttypes>
+#include <atomic>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -30,7 +33,6 @@
 #include "attachment_helpers.hpp"
 #include "cdr.hpp"
 #include "rmw_context_impl_s.hpp"
-#include "message_type_support.hpp"
 #include "logging_macros.hpp"
 #include "qos.hpp"
 
@@ -39,6 +41,8 @@
 #include "rmw/error_handling.h"
 #include "rmw/get_topic_endpoint_info.h"
 #include "rmw/impl/cpp/macros.hpp"
+
+#include "tracetools/tracetools.h"
 
 namespace rmw_zenoh_cpp
 {
@@ -63,6 +67,9 @@ std::shared_ptr<ServiceData> ServiceData::make(
     return nullptr;
   }
 
+  rcutils_allocator_t * allocator = &node->context->options.allocator;
+
+  const rosidl_type_hash_t * type_hash = type_support->get_type_hash_func(type_support);
   auto service_members = static_cast<const service_type_support_callbacks_t *>(type_support->data);
   auto request_members = static_cast<const message_type_support_callbacks_t *>(
     service_members->request_members_->data);
@@ -86,9 +93,20 @@ std::shared_ptr<ServiceData> ServiceData::make(
     return nullptr;
   }
 
-  // Humble doesn't support type hash, but we leave it in place as a constant so we don't have to
-  // change the graph and liveliness token code.
-  const char * type_hash_c_str = "TypeHashNotSupported";
+  // Convert the type hash to a string so that it can be included in the keyexpr.
+  char * type_hash_c_str = nullptr;
+  rcutils_ret_t stringify_ret = rosidl_stringify_type_hash(
+    type_hash,
+    *allocator,
+    &type_hash_c_str);
+  if (RCUTILS_RET_BAD_ALLOC == stringify_ret) {
+    // rosidl_stringify_type_hash already set the error
+    return nullptr;
+  }
+  auto free_type_hash_c_str = rcpputils::make_scope_exit(
+    [&allocator, &type_hash_c_str]() {
+      allocator->deallocate(type_hash_c_str, allocator->state);
+    });
 
   std::size_t domain_id = node_info.domain_id_;
   auto entity = liveliness::Entity::make(
@@ -204,7 +222,7 @@ ServiceData::ServiceData(
 }
 
 ///=============================================================================
-liveliness::TopicInfo ServiceData::topic_info() const
+const liveliness::TopicInfo & ServiceData::topic_info() const
 {
   return entity_->topic_info().value();
 }
@@ -215,7 +233,7 @@ bool ServiceData::liveliness_is_valid() const
   // The z_check function is now internal in zenoh-1.0.0 so we assume
   // the liveliness token is still initialized as long as this entity has
   // not been shutdown.
-  return !is_shutdown_.load(std::memory_order_acquire);
+  return !is_shutdown();
 }
 
 ///=============================================================================
@@ -263,7 +281,7 @@ rmw_ret_t ServiceData::take_request(
   std::lock_guard<std::mutex> lock(mutex_);
   *taken = false;
 
-  if (is_shutdown_.load(std::memory_order_acquire) || query_queue_.empty()) {
+  if (is_shutdown() || query_queue_.empty()) {
     // This tells rcl that the check for a new message was done, but no messages have come in yet.
     return RMW_RET_OK;
   }
@@ -321,8 +339,8 @@ rmw_ret_t ServiceData::take_request(
     return RMW_RET_ERROR;
   }
 
-  std::array<uint8_t, 16> writer_guid = attachment.copy_gid();
-  memcpy(request_header->request_id.writer_guid, writer_guid.data(), 16);
+  std::array<uint8_t, RMW_GID_STORAGE_SIZE> writer_guid = attachment.copy_gid();
+  memcpy(request_header->request_id.writer_guid, writer_guid.data(), RMW_GID_STORAGE_SIZE);
 
   request_header->source_timestamp = attachment.source_timestamp();
   if (request_header->source_timestamp < 0) {
@@ -358,7 +376,7 @@ rmw_ret_t ServiceData::send_response(
   void * ros_response)
 {
   std::lock_guard<std::mutex> lock(mutex_);
-  if (is_shutdown_.load(std::memory_order_acquire)) {
+  if (is_shutdown()) {
     RMW_ZENOH_LOG_DEBUG_NAMED(
       "rmw_zenoh_cpp",
       "Unable to send response as the service is shutdown."
@@ -366,8 +384,8 @@ rmw_ret_t ServiceData::send_response(
     return RMW_RET_OK;
   }
 
-  std::array<uint8_t, 16> writer_guid;
-  memcpy(writer_guid.data(), request_id->writer_guid, 16);
+  std::array<uint8_t, RMW_GID_STORAGE_SIZE> writer_guid;
+  memcpy(writer_guid.data(), request_id->writer_guid, RMW_GID_STORAGE_SIZE);
 
   // Create the queryable payload
   const size_t hash = hash_gid(writer_guid);
@@ -425,8 +443,8 @@ rmw_ret_t ServiceData::send_response(
 
   const zenoh::Query & loaned_query = query->get_query();
   zenoh::Query::ReplyOptions options = zenoh::Query::ReplyOptions::create_default();
-  std::array<uint8_t, 16> writer_gid;
-  memcpy(writer_gid.data(), request_id->writer_guid, 16);
+  std::array<uint8_t, RMW_GID_STORAGE_SIZE> writer_gid;
+  memcpy(writer_gid.data(), request_id->writer_guid, RMW_GID_STORAGE_SIZE);
   int64_t source_timestamp = rmw_zenoh_cpp::get_system_time_in_ns();
   options.attachment = rmw_zenoh_cpp::AttachmentData(
     request_id->sequence_number, source_timestamp, writer_gid).serialize_to_zbytes();
@@ -436,6 +454,13 @@ rmw_ret_t ServiceData::send_response(
     reinterpret_cast<const uint8_t *>(response_bytes) + data_length);
   zenoh::Bytes payload(std::move(raw_bytes));
 
+  TRACETOOLS_TRACEPOINT(
+    rmw_send_response,
+    static_cast<const void *>(rmw_service_),
+    static_cast<const void *>(ros_response),
+    request_id->writer_guid,
+    request_id->sequence_number,
+    source_timestamp);
   zenoh::ZResult result;
   loaned_query.reply(keyexpr_, std::move(payload), std::move(options), &result);
   if (result != Z_OK) {
@@ -495,8 +520,7 @@ rmw_ret_t ServiceData::shutdown()
 {
   rmw_ret_t ret = RMW_RET_OK;
   bool expected = false;
-  if (!is_shutdown_.compare_exchange_strong(
-      expected, true, std::memory_order_acq_rel,
+  if (!is_shutdown_.compare_exchange_strong(expected, true, std::memory_order_acq_rel,
       std::memory_order_relaxed))
   {
     return ret;

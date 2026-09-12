@@ -2,62 +2,107 @@
 Changelog for package zenoh_cpp_vendor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-0.1.9 (2026-07-22)
-------------------
-* Bump zenoh to 1.8.0 - 2nd attempt (`#967 <https://github.com/ros2/rmw_zenoh/issues/967>`_)
-* Revert 1.8.0 (`#963 <https://github.com/ros2/rmw_zenoh/issues/963>`_)
-* Build against rust >= 1.75 for ROS Lyrical (`#950 <https://github.com/ros2/rmw_zenoh/issues/950>`_)
-* Bump zenoh to 1.8.0 (`#941 <https://github.com/ros2/rmw_zenoh/issues/941>`_)
-* Allow use of non-vendored Zenoh if present (`#911 <https://github.com/ros2/rmw_zenoh/issues/911>`_)
-* Bump zenoh to 1.7.1 (`#874 <https://github.com/ros2/rmw_zenoh/issues/874>`_)
-* Contributors: Julien Enoch, Yuyuan Yuan, Shane Loretz, Denis Biryukov, Øystein Sture
+0.13.0 (2026-09-11)
+-------------------
+* Silence informational zenoh-c build-script warnings (`#1047 <https://github.com/ros2/rmw_zenoh/issues/1047>`_)
+* Contributors: Michael Carroll
 
-0.1.8 (2025-11-12)
-------------------
-* Bump zenoh to 1.6.2 (`#851 <https://github.com/ros2/rmw_zenoh/issues/851>`_)
+0.12.0 (2026-07-22)
+-------------------
+* use C++ 20 in default. (`#1006 <https://github.com/ros2/rmw_zenoh/issues/1006>`_)
+* Contributors: Alejandro Hernandez Cordero, Tomoya Fujita
+
+0.11.0 (2026-05-07)
+-------------------
+* Use zenoh-cpp 481b71b fixing build with MSVC 2022 in C++20 mode (`#969 <https://github.com/ros2/rmw_zenoh/issues/969>`_)
 * Contributors: Julien Enoch
 
-0.1.7 (2025-10-05)
-------------------
+0.10.3 (2026-04-14)
+-------------------
 
-0.1.6 (2025-09-10)
-------------------
-* Bump Zenoh to 1.5.1 (`#778 <https://github.com/ros2/rmw_zenoh/issues/778>`_)
+* Bump Zenoh to 1.8.0, fix Windows shutdown hang, and resolve synchronization with ``undeclare`` (`#964 <https://github.com/ros2/rmw_zenoh/issues/964>`_)
+* Revert changes to build against rust >= 1.75 and bump zenoh to 1.8.0 (`#960 <https://github.com/ros2/rmw_zenoh/issues/960>`_)
+* Revert patch of Cargo.lock with new Zenoh commit due to Windows test failures (`#959 <https://github.com/ros2/rmw_zenoh/issues/959>`_)
+* Update Cargo.lock with new Zenoh commit (`#957 <https://github.com/ros2/rmw_zenoh/issues/957>`_)
+* Build against ``rust >= 1.75`` for ROS Lyrical (`#945 <https://github.com/ros2/rmw_zenoh/issues/945>`_)
+* Bump zenoh to 1.8.0 (`#935 <https://github.com/ros2/rmw_zenoh/issues/935>`_)
+* Allow use of non-vendored Zenoh if present (`#908 <https://github.com/ros2/rmw_zenoh/issues/908>`_)
+* Bump ``zenoh`` to 1.7.1 (`#870 <https://github.com/ros2/rmw_zenoh/issues/870>`_)
+
+* Contributors: Julien Enoch, Shane Loretz, Yuyuan Yuan, Øystein Sture
+
+0.10.2 (2025-11-18)
+-------------------
+* Fix REP url locations (`#858 <https://github.com/ros2/rmw_zenoh/issues/858>`_)
+* Contributors: Tim Clephas
+
+0.10.1 (2025-11-12)
+-------------------
+* Bump zenoh to 1.6.2 (`#842 <https://github.com/ros2/rmw_zenoh/issues/842>`_)
 * Contributors: Julien Enoch
 
-0.1.5 (2025-08-21)
-------------------
-* Bump Zenoh to v1.5.0 (`#737 <https://github.com/ros2/rmw_zenoh/issues/737>`_)
-* Change zenoh-c features to use its default + shared-memory + transport_serial (`#717 <https://github.com/ros2/rmw_zenoh/issues/717>`_)
-* Contributors: ChenYing Kuo (CY), Julien Enoch, Yadunund, Yuyuan Yuan
+0.10.0 (2025-10-04)
+-------------------
 
-0.1.4 (2025-07-11)
+0.9.1 (2025-09-10)
+------------------
+* Bump Zenoh to 1.5.1 (`#774 <https://github.com/ros2/rmw_zenoh/issues/774>`_)
+* Contributors: Julien Enoch
+
+0.9.0 (2025-08-21)
+------------------
+* Bump Zenoh to v1.5.0 (`#728 <https://github.com/ros2/rmw_zenoh/issues/728>`_)
+* Contributors: ChenYing Kuo (CY), Julien Enoch, Yuyuan Yuan
+
+0.8.2 (2025-07-29)
+------------------
+* Change zenoh-c features to use its default + shared-memory + transport_serial (`#692 <https://github.com/ros2/rmw_zenoh/issues/692>`_)
+* Contributors: Julien Enoch
+
+0.8.1 (2025-07-01)
 ------------------
 
-0.1.3 (2025-06-26)
+0.8.0 (2025-06-18)
+------------------
+* Bump Zenoh to 1.4.0 (`#652 <https://github.com/ros2/rmw_zenoh/issues/652>`_)
+* Contributors: Julien Enoch
+
+0.7.1 (2025-05-19)
+------------------
+* fix: pin rust toolchain to v1.75.0 (`#602 <https://github.com/ros2/rmw_zenoh/issues/602>`_)
+* fix: use the right commit to bump zenoh to v1.3.2 (`#607 <https://github.com/ros2/rmw_zenoh/issues/607>`_)
+* Contributors: Yadunund, Yuyuan Yuan
+
+0.7.0 (2025-04-24)
 ------------------
 
-0.1.2 (2025-06-19)
+0.6.0 (2025-04-18)
 ------------------
-* Bump Zenoh to 1.4.0 (`#652 <https://github.com/ros2/rmw_zenoh/issues/652>`_) (`#659 <https://github.com/ros2/rmw_zenoh/issues/659>`_)
-* fix: pin rust toolchain to v1.75.0 (`#602 <https://github.com/ros2/rmw_zenoh/issues/602>`_) (`#636 <https://github.com/ros2/rmw_zenoh/issues/636>`_)
-* fix: use the right commit to bump zenoh to v1.3.2 (`#607 <https://github.com/ros2/rmw_zenoh/issues/607>`_) (`#633 <https://github.com/ros2/rmw_zenoh/issues/633>`_)
-* Bump Zenoh to v1.3.2 and improve e2e reliability with HeartbeatSporadic (`#591 <https://github.com/ros2/rmw_zenoh/issues/591>`_) (`#594 <https://github.com/ros2/rmw_zenoh/issues/594>`_)
-* build(deps): bump zenoh-cpp from 2a127bb to 8ad67f6, zenoh-c from 3540a3c to e6a1971, and zenoh from f735bf5 to b661454 (`#544 <https://github.com/ros2/rmw_zenoh/issues/544>`_) (`#550 <https://github.com/ros2/rmw_zenoh/issues/550>`_)
-* Enable Zenoh UDP transport (`#486 <https://github.com/ros2/rmw_zenoh/issues/486>`_) (`#489 <https://github.com/ros2/rmw_zenoh/issues/489>`_)
-* Bump zenoh-cpp to 2a127bb, zenoh-c to 3540a3c, and zenoh to f735bf5 (`#503 <https://github.com/ros2/rmw_zenoh/issues/503>`_) (`#512 <https://github.com/ros2/rmw_zenoh/issues/512>`_)
-* Bump zenoh-c to 261493 and zenoh-cpp to 5dfb68c (`#463 <https://github.com/ros2/rmw_zenoh/issues/463>`_) (`#467 <https://github.com/ros2/rmw_zenoh/issues/467>`_)
-* Bump Zenoh to commit id 3bbf6af (1.2.1 + few commits) (`#456 <https://github.com/ros2/rmw_zenoh/issues/456>`_) (`#462 <https://github.com/ros2/rmw_zenoh/issues/462>`_)
-* Contributors: Hugal31, Julien Enoch, Luca Cominardi, Yadunund, Yuyuan Yuan
+* Bump Zenoh to v1.3.2 and improve e2e reliability with HeartbeatSporadic (`#591 <https://github.com/ros2/rmw_zenoh/issues/591>`_)
+* Add quality declaration (`#483 <https://github.com/ros2/rmw_zenoh/issues/483>`_)
+* Contributors: Alejandro Hernández Cordero, Julien Enoch
 
-0.1.1 (2025-02-04)
+0.5.0 (2025-03-20)
 ------------------
-* Bump Zenoh to commit id e4ea6f0 (1.2.0 + few commits) (`#449 <https://github.com/ros2/rmw_zenoh/issues/449>`_)
-* Bump zenoh-c and zenoh-cpp to 1.1.1 (`#430 <https://github.com/ros2/rmw_zenoh/issues/430>`_)
-* Update Zenoh version (`#410 <https://github.com/ros2/rmw_zenoh/issues/410>`_)
-* Contributors: ChenYing Kuo (CY), Julien Enoch, Yadunund, Yuyuan Yuan
+* Fix liveliness crash in debug mode (`#544 <https://github.com/ros2/rmw_zenoh/issues/544>`_)
+* Bump zenoh-cpp to 2a127bb, zenoh-c to 3540a3c, and zenoh to f735bf5 (`#503 <https://github.com/ros2/rmw_zenoh/issues/503>`_)
+* Enable Zenoh UDP transport (`#486 <https://github.com/ros2/rmw_zenoh/issues/486>`_)
+* Contributors: Hugal31, Luca Cominardi, Yuyuan Yuan
 
-0.1.0 (2025-01-02)
+0.4.0 (2025-02-19)
+------------------
+* Bump zenoh-c to 261493 and zenoh-cpp to 5dfb68c (`#463 <https://github.com/ros2/rmw_zenoh/issues/463>`_)
+* Bump Zenoh to commit id 3bbf6af (1.2.1 + few commits) (`#456 <https://github.com/ros2/rmw_zenoh/issues/456>`_)
+* Contributors: Julien Enoch
+
+0.3.1 (2025-02-04)
+------------------
+* Bump Zenoh to commit id e4ea6f0 (1.2.0 + few commits) (`#446 <https://github.com/ros2/rmw_zenoh/issues/446>`_)
+* Bump zenoh-c and zenoh-cpp to 1.1.1 (`#424 <https://github.com/ros2/rmw_zenoh/issues/424>`_)
+* Update Zenoh version (`#405 <https://github.com/ros2/rmw_zenoh/issues/405>`_)
+* Contributors: ChenYing Kuo (CY), Julien Enoch, Yuyuan Yuan, Yadunund
+
+0.3.0 (2025-01-02)
 ------------------
 * Vendors zenoh-cpp for rmw_zenoh.
 * Contributors: Alejandro Hernández Cordero, Chris Lalancette, Franco Cipollone, Julien Enoch, Yadunund, Yuyuan Yuan

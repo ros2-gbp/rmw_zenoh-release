@@ -13,17 +13,14 @@
 // limitations under the License.
 
 #include <string>
-#include <thread>
 
 #include <zenoh.hxx>
 
 #include "detail/identifier.hpp"
-#include "detail/liveliness_utils.hpp"
 #include "detail/rmw_context_impl_s.hpp"
 #include "detail/zenoh_config.hpp"
 
 #include "rcutils/env.h"
-#include "detail/logging_macros.hpp"
 #include "rcutils/strdup.h"
 #include "rcutils/types.h"
 
@@ -84,13 +81,9 @@ rmw_init(const rmw_init_options_t * options, rmw_context_t * context)
       }
     });
 
-  // Equivalent to rcutils_set_env_overwrite(ZENOH_LOG_ENV_VAR_STR, ZENOH_LOG_WARN_LEVEL_STR, 0)
-  // in modern ROS 2.
-  if (getenv(ZENOH_LOG_ENV_VAR_STR) == nullptr) {
-    if (!rcutils_set_env(ZENOH_LOG_ENV_VAR_STR, ZENOH_LOG_WARN_LEVEL_STR)) {
-      RMW_SET_ERROR_MSG("Error configuring Zenoh logging.");
-      return RMW_RET_ERROR;
-    }
+  if (!rcutils_set_env_overwrite(ZENOH_LOG_ENV_VAR_STR, ZENOH_LOG_WARN_LEVEL_STR, 0)) {
+    RMW_SET_ERROR_MSG("Error configuring Zenoh logging.");
+    return RMW_RET_ERROR;
   }
 
   // Enable the zenoh built-in logger

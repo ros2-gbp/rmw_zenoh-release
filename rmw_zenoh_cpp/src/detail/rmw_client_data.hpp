@@ -24,15 +24,12 @@
 #include <mutex>
 #include <optional>
 #include <string>
-#include <unordered_map>
 
 #include <zenoh.hxx>
 
 #include "event.hpp"
 #include "liveliness_utils.hpp"
-#include "message_type_support.hpp"
 #include "service_type_support.hpp"
-#include "type_support_common.hpp"
 #include "zenoh_utils.hpp"
 
 #include "rcutils/allocator.h"
@@ -59,14 +56,14 @@ public:
     const rosidl_service_type_support_t * type_support,
     const rmw_qos_profile_t * qos_profile);
 
-  // Get a copy of the TopicInfo of this ClientData.
-  liveliness::TopicInfo topic_info() const;
+  // Borrow the immutable TopicInfo owned by this ClientData's Entity.
+  const liveliness::TopicInfo & topic_info() const;
 
   // Returns true if liveliness token is still valid.
   bool liveliness_is_valid() const;
 
   // Copy the GID of this ClientData into an rmw_gid_t.
-  std::array<uint8_t, 16> copy_gid() const;
+  std::array<uint8_t, RMW_GID_STORAGE_SIZE> copy_gid() const;
 
   // Add a new ZenohReply to the queue.
   void add_new_reply(std::unique_ptr<rmw_zenoh_cpp::ZenohReply> reply);

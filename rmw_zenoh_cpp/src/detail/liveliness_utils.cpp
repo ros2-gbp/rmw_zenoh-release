@@ -14,12 +14,18 @@
 
 #include "liveliness_utils.hpp"
 
+#include <algorithm>
+#include <array>
+#include <cerrno>
+#include <cstddef>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
 #include <functional>
 #include <limits>
+#include <memory>
 #include <optional>
-#include <random>
 #include <sstream>
-#include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
@@ -78,11 +84,13 @@ TopicInfo::TopicInfo(
   std::string name,
   std::string type,
   std::string type_hash,
-  rmw_qos_profile_t qos)
+  rmw_qos_profile_t qos,
+  std::optional<std::unordered_map<std::string, std::string>> backend_metadata)
 : name_(std::move(name)),
   type_(std::move(type)),
   type_hash_(std::move(type_hash)),
-  qos_(std::move(qos))
+  qos_(std::move(qos)),
+  backend_metadata_(std::move(backend_metadata))
 {
   topic_keyexpr_ = std::to_string(domain_id);
   topic_keyexpr_ += "/";
@@ -96,6 +104,65 @@ TopicInfo::TopicInfo(
 ///=============================================================================
 namespace
 {
+std::string escape_backend_field(const std::string & input)
+{
+  std::string out;
+  out.reserve(input.size());
+  for (char c : input) {
+    switch (c) {
+      case '%':
+        out += "%25";
+        break;
+      case ';':
+        out += "%3B";
+        break;
+      case ':':
+        out += "%3A";
+        break;
+      case '/':
+        out += "%2F";
+        break;
+      default:
+        out += c;
+        break;
+    }
+  }
+  return out;
+}
+
+int hex_value(char c)
+{
+  if (c >= '0' && c <= '9') {
+    return c - '0';
+  }
+  if (c >= 'A' && c <= 'F') {
+    return 10 + (c - 'A');
+  }
+  if (c >= 'a' && c <= 'f') {
+    return 10 + (c - 'a');
+  }
+  return -1;
+}
+
+std::string unescape_backend_field(const std::string & input)
+{
+  std::string out;
+  out.reserve(input.size());
+  for (size_t i = 0; i < input.size(); ++i) {
+    if (input[i] == '%' && i + 2 < input.size()) {
+      int hi = hex_value(input[i + 1]);
+      int lo = hex_value(input[i + 2]);
+      if (hi >= 0 && lo >= 0) {
+        char decoded = static_cast<char>((hi << 4) | lo);
+        out += decoded;
+        i += 2;
+        continue;
+      }
+    }
+    out += input[i];
+  }
+  return out;
+}
 /// Enum of liveliness key-expression components.
 enum KeyexprIndex
 {
@@ -111,12 +178,18 @@ enum KeyexprIndex
   TopicName,
   TopicType,
   TopicTypeHash,
-  TopicQoS
+  TopicQoS,
+  Backends  // Optional: only present for Buffer message types
 };
 
 // Every keyexpression will have components upto node name.
 #define KEYEXPR_INDEX_MIN KeyexprIndex::NodeName
-#define KEYEXPR_INDEX_MAX KeyexprIndex::TopicQoS
+// Last mandatory key index for a non-Node entity.  Anything past this index
+// (currently just `Backends`) is optional and may legitimately be missing
+// from a liveliness token.  Bump this when promoting a field from optional
+// to mandatory.
+#define MANDATORY_KEYEXPR_INDEX_MAX KeyexprIndex::TopicQoS
+#define KEYEXPR_INDEX_MAX KeyexprIndex::Backends
 
 /// The admin space used to prefix the liveliness tokens.
 static const char ADMIN_SPACE[] = "@ros2_lv";
@@ -159,7 +232,9 @@ static const std::unordered_map<std::string,
     RMW_QOS_POLICY_RELIABILITY_SYSTEM_DEFAULT},
   {std::to_string(RMW_QOS_POLICY_RELIABILITY_RELIABLE), RMW_QOS_POLICY_RELIABILITY_RELIABLE},
   {std::to_string(RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT), RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT},
-  {std::to_string(RMW_QOS_POLICY_RELIABILITY_UNKNOWN), RMW_QOS_POLICY_RELIABILITY_UNKNOWN}
+  {std::to_string(RMW_QOS_POLICY_RELIABILITY_UNKNOWN), RMW_QOS_POLICY_RELIABILITY_UNKNOWN},
+  {std::to_string(RMW_QOS_POLICY_RELIABILITY_BEST_AVAILABLE),
+    RMW_QOS_POLICY_RELIABILITY_BEST_AVAILABLE}
 };
 
 static const std::unordered_map<std::string, rmw_qos_durability_policy_e> str_to_qos_durability = {
@@ -168,7 +243,9 @@ static const std::unordered_map<std::string, rmw_qos_durability_policy_e> str_to
   {std::to_string(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL),
     RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL},
   {std::to_string(RMW_QOS_POLICY_DURABILITY_VOLATILE), RMW_QOS_POLICY_DURABILITY_VOLATILE},
-  {std::to_string(RMW_QOS_POLICY_DURABILITY_UNKNOWN), RMW_QOS_POLICY_DURABILITY_UNKNOWN}
+  {std::to_string(RMW_QOS_POLICY_DURABILITY_UNKNOWN), RMW_QOS_POLICY_DURABILITY_UNKNOWN},
+  {std::to_string(RMW_QOS_POLICY_DURABILITY_BEST_AVAILABLE),
+    RMW_QOS_POLICY_DURABILITY_BEST_AVAILABLE}
 };
 
 static const std::unordered_map<std::string, rmw_qos_liveliness_policy_e> str_to_qos_liveliness = {
@@ -179,6 +256,49 @@ static const std::unordered_map<std::string, rmw_qos_liveliness_policy_e> str_to
   {std::to_string(RMW_QOS_POLICY_LIVELINESS_MANUAL_BY_TOPIC),
     RMW_QOS_POLICY_LIVELINESS_MANUAL_BY_TOPIC},
   {std::to_string(RMW_QOS_POLICY_LIVELINESS_UNKNOWN), RMW_QOS_POLICY_LIVELINESS_UNKNOWN},
+  {std::to_string(RMW_QOS_POLICY_LIVELINESS_BEST_AVAILABLE),
+    RMW_QOS_POLICY_LIVELINESS_BEST_AVAILABLE}
+};
+
+static const std::unordered_map<rmw_qos_history_policy_e, std::string> qos_history_to_str = {
+  {RMW_QOS_POLICY_HISTORY_SYSTEM_DEFAULT, std::to_string(RMW_QOS_POLICY_HISTORY_SYSTEM_DEFAULT)},
+  {RMW_QOS_POLICY_HISTORY_KEEP_LAST, std::to_string(RMW_QOS_POLICY_HISTORY_KEEP_LAST)},
+  {RMW_QOS_POLICY_HISTORY_KEEP_ALL, std::to_string(RMW_QOS_POLICY_HISTORY_KEEP_ALL)},
+  {RMW_QOS_POLICY_HISTORY_UNKNOWN, std::to_string(RMW_QOS_POLICY_HISTORY_UNKNOWN)}
+};
+
+static const std::unordered_map<rmw_qos_reliability_policy_e, std::string> qos_reliability_to_str =
+{
+  {RMW_QOS_POLICY_RELIABILITY_SYSTEM_DEFAULT,
+    std::to_string(RMW_QOS_POLICY_RELIABILITY_SYSTEM_DEFAULT)},
+  {RMW_QOS_POLICY_RELIABILITY_RELIABLE, std::to_string(RMW_QOS_POLICY_RELIABILITY_RELIABLE)},
+  {RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT, std::to_string(RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT)},
+  {RMW_QOS_POLICY_RELIABILITY_UNKNOWN, std::to_string(RMW_QOS_POLICY_RELIABILITY_UNKNOWN)},
+  {RMW_QOS_POLICY_RELIABILITY_BEST_AVAILABLE,
+    std::to_string(RMW_QOS_POLICY_RELIABILITY_BEST_AVAILABLE)}
+};
+
+static const std::unordered_map<rmw_qos_durability_policy_e, std::string> qos_durability_to_str = {
+  {RMW_QOS_POLICY_DURABILITY_SYSTEM_DEFAULT,
+    std::to_string(RMW_QOS_POLICY_DURABILITY_SYSTEM_DEFAULT)},
+  {RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL,
+    std::to_string(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL)},
+  {RMW_QOS_POLICY_DURABILITY_VOLATILE, std::to_string(RMW_QOS_POLICY_DURABILITY_VOLATILE)},
+  {RMW_QOS_POLICY_DURABILITY_UNKNOWN, std::to_string(RMW_QOS_POLICY_DURABILITY_UNKNOWN)},
+  {RMW_QOS_POLICY_DURABILITY_BEST_AVAILABLE,
+    std::to_string(RMW_QOS_POLICY_DURABILITY_BEST_AVAILABLE)}
+};
+
+static const std::unordered_map<rmw_qos_liveliness_policy_e, std::string> qos_liveliness_to_str = {
+  {RMW_QOS_POLICY_LIVELINESS_SYSTEM_DEFAULT,
+    std::to_string(RMW_QOS_POLICY_LIVELINESS_SYSTEM_DEFAULT)},
+  {RMW_QOS_POLICY_LIVELINESS_AUTOMATIC,
+    std::to_string(RMW_QOS_POLICY_LIVELINESS_AUTOMATIC)},
+  {RMW_QOS_POLICY_LIVELINESS_MANUAL_BY_TOPIC,
+    std::to_string(RMW_QOS_POLICY_LIVELINESS_MANUAL_BY_TOPIC)},
+  {RMW_QOS_POLICY_LIVELINESS_UNKNOWN, std::to_string(RMW_QOS_POLICY_LIVELINESS_UNKNOWN)},
+  {RMW_QOS_POLICY_LIVELINESS_BEST_AVAILABLE,
+    std::to_string(RMW_QOS_POLICY_LIVELINESS_BEST_AVAILABLE)}
 };
 
 std::vector<std::string> split_keyexpr(
@@ -204,16 +324,23 @@ std::vector<std::string> split_keyexpr(
 template<typename T>
 std::optional<T> str_to_size_t(const std::string & str, const T default_value)
 {
+  static_assert(std::is_unsigned<T>::value, "T must be an unsigned type");
+
   if (str.empty()) {
     return default_value;
   }
+
+  // Reject negative numbers
+  if (str[0] == '-') {
+    RMW_SET_ERROR_MSG("negative values are not allowed");
+    return std::nullopt;
+  }
+
   errno = 0;
   char * endptr;
-  // TODO(Yadunund): strtoul returns an unsigned long, not size_t.
-  // Depending on the architecture and platform, these may not be the same size.
-  // Further, if the incoming str is a signed integer, storing it in a size_t is incorrect.
-  // We should fix this piece of code to deal with both of those situations.
-  size_t num = strtoul(str.c_str(), &endptr, 10);
+  // Use strtoull which returns uint64_t equivalent, large enough for size_t on all platforms
+  uint64_t num = strtoull(str.c_str(), &endptr, 10);
+
   if (endptr == str.c_str()) {
     // No values were converted, this is an error
     RMW_SET_ERROR_MSG("no valid numbers available");
@@ -222,18 +349,17 @@ std::optional<T> str_to_size_t(const std::string & str, const T default_value)
     // There was junk after the number
     RMW_SET_ERROR_MSG("non-numeric values");
     return std::nullopt;
-  } else if (errno != 0) {
-    // Some other error occurred, which may include overflow or underflow
-    RMW_SET_ERROR_MSG(
-      "an undefined error occurred while getting the number, this may be an overflow");
+  } else if (errno == ERANGE || num > std::numeric_limits<T>::max()) {
+    // Overflow occurred or value exceeds target type's maximum
+    RMW_SET_ERROR_MSG("value overflows target type");
     return std::nullopt;
   }
-  return num;
+
+  return static_cast<T>(num);
 }
 }  // namespace
 
 ///=============================================================================
-// TODO(Yadunund): Rely on maps to retrieve strings.
 std::string qos_to_keyexpr(const rmw_qos_profile_t & qos)
 {
   std::string keyexpr = "";
@@ -241,19 +367,19 @@ std::string qos_to_keyexpr(const rmw_qos_profile_t & qos)
 
   // Reliability.
   if (qos.reliability != default_qos.reliability) {
-    keyexpr += std::to_string(qos.reliability);
+    keyexpr += qos_reliability_to_str.at(qos.reliability);
   }
   keyexpr += QOS_DELIMITER;
 
   // Durability.
   if (qos.durability != default_qos.durability) {
-    keyexpr += std::to_string(qos.durability);
+    keyexpr += qos_durability_to_str.at(qos.durability);
   }
   keyexpr += QOS_DELIMITER;
 
   // History.
   if (qos.history != default_qos.history) {
-    keyexpr += std::to_string(qos.history);
+    keyexpr += qos_history_to_str.at(qos.history);
   }
   keyexpr += QOS_COMPONENT_DELIMITER;
   if (qos.depth != default_qos.depth) {
@@ -283,7 +409,7 @@ std::string qos_to_keyexpr(const rmw_qos_profile_t & qos)
 
   // Liveliness.
   if (qos.liveliness != default_qos.liveliness) {
-    keyexpr += std::to_string(qos.liveliness);
+    keyexpr += qos_liveliness_to_str.at(qos.liveliness);
   }
   keyexpr += QOS_COMPONENT_DELIMITER;
   if (qos.liveliness_lease_duration.sec != default_qos.liveliness_lease_duration.sec) {
@@ -413,6 +539,30 @@ Entity::Entity(
     keyexpr_parts[KeyexprIndex::TopicType] = mangle_name(topic_info.type_);
     keyexpr_parts[KeyexprIndex::TopicTypeHash] = mangle_name(topic_info.type_hash_);
     keyexpr_parts[KeyexprIndex::TopicQoS] = qos_to_keyexpr(topic_info.qos_);
+
+    // Add backend metadata if present (only for Buffer message types)
+    if (topic_info.backend_metadata_.has_value() && !topic_info.backend_metadata_.value().empty()) {
+      const auto & backend_metadata = topic_info.backend_metadata_.value();
+      std::vector<std::string> backend_names;
+      backend_names.reserve(backend_metadata.size());
+      for (const auto & pair : backend_metadata) {
+        backend_names.push_back(pair.first);
+      }
+      std::sort(backend_names.begin(), backend_names.end());
+
+      std::string backends_str = "backends:";
+      for (size_t i = 0; i < backend_names.size(); ++i) {
+        const auto & name = backend_names[i];
+        const auto & metadata = backend_metadata.at(name);
+        backends_str += escape_backend_field(name);
+        backends_str += ":";
+        backends_str += escape_backend_field(metadata);
+        if (i + 1 < backend_names.size()) {
+          backends_str += ";";
+        }
+      }
+      keyexpr_parts[KeyexprIndex::Backends] = backends_str;
+    }
   }
 
   for (std::size_t i = 0; i < KEYEXPR_INDEX_MAX + 1; ++i) {
@@ -436,9 +586,8 @@ Entity::Entity(
   simplified_XXH128_hash_t keyexpr_gid =
     simplified_XXH3_128bits(this->liveliness_keyexpr_.c_str(), this->liveliness_keyexpr_.length());
   memcpy(this->gid_.data(), &keyexpr_gid.low64, sizeof(keyexpr_gid.low64));
-  memcpy(
-    this->gid_.data() + sizeof(keyexpr_gid.low64), &keyexpr_gid.high64,
-    sizeof(keyexpr_gid.high64));
+  memcpy(this->gid_.data() + sizeof(keyexpr_gid.low64), &keyexpr_gid.high64,
+        sizeof(keyexpr_gid.high64));
 
   // We also hash the liveliness keyexpression into a size_t that we use to index into our maps.
   this->gid_hash_ = hash_gid(this->gid_);
@@ -534,7 +683,12 @@ std::shared_ptr<Entity> Entity::make(const std::string & keyexpr)
 
   // Populate topic_info if we have a token for an entity other than a node.
   if (entity_type != EntityType::Node) {
-    if (parts.size() < KEYEXPR_INDEX_MAX + 1) {
+    // Mandatory key-expression components for non-Node entities run from
+    // index 0 through MANDATORY_KEYEXPR_INDEX_MAX (= TopicQoS).  Anything
+    // beyond that (currently just the optional Backends component) may
+    // legitimately be missing, so we validate against the mandatory bound
+    // only.
+    if (parts.size() < MANDATORY_KEYEXPR_INDEX_MAX + 1) {
       RMW_ZENOH_LOG_ERROR_NAMED(
         "rmw_zenoh_cpp",
         "Received liveliness token for non-node entity without required parameters.");
@@ -547,12 +701,50 @@ std::shared_ptr<Entity> Entity::make(const std::string & keyexpr)
         "Received liveliness token with invalid qos keyexpr");
       return nullptr;
     }
+
+    // Parse optional backends field (only present for Buffer message types)
+    std::optional<std::unordered_map<std::string, std::string>> backend_metadata = std::nullopt;
+    if (parts.size() > KeyexprIndex::TopicQoS + 1 &&
+      !parts[KeyexprIndex::Backends].empty() &&
+      parts[KeyexprIndex::Backends].rfind("backends:", 0) == 0)
+    {
+      // Parse backend list: "backends:cuda:metadata;cpu:" -> map
+      std::string backends_str = parts[KeyexprIndex::Backends].substr(9);  // Skip "backends:"
+      if (!backends_str.empty()) {
+        std::unordered_map<std::string, std::string> parsed;
+        size_t start = 0;
+        while (start <= backends_str.size()) {
+          size_t sep = backends_str.find(';', start);
+          std::string entry = backends_str.substr(
+            start, sep == std::string::npos ? std::string::npos : sep - start);
+          if (!entry.empty()) {
+            size_t colon = entry.find(':');
+            std::string name = entry.substr(0, colon);
+            std::string metadata = (colon == std::string::npos) ? "" : entry.substr(colon + 1);
+            name = unescape_backend_field(name);
+            metadata = unescape_backend_field(metadata);
+            if (!name.empty()) {
+              parsed[name] = metadata;
+            }
+          }
+          if (sep == std::string::npos) {
+            break;
+          }
+          start = sep + 1;
+        }
+        if (!parsed.empty()) {
+          backend_metadata = std::move(parsed);
+        }
+      }
+    }
+
     topic_info = TopicInfo{
       domain_id,
       demangle_name(std::move(parts[KeyexprIndex::TopicName])),
       demangle_name(std::move(parts[KeyexprIndex::TopicType])),
       demangle_name(std::move(parts[KeyexprIndex::TopicTypeHash])),
-      std::move(qos.value())
+      std::move(qos.value()),
+      std::move(backend_metadata)
     };
   }
 
@@ -618,7 +810,7 @@ NodeInfo Entity::node_info() const
 }
 
 ///=============================================================================
-std::optional<TopicInfo> Entity::topic_info() const
+const std::optional<TopicInfo> & Entity::topic_info() const
 {
   return this->topic_info_;
 }
@@ -630,7 +822,7 @@ std::string Entity::liveliness_keyexpr() const
 }
 
 ///=============================================================================
-std::array<uint8_t, 16> Entity::copy_gid() const
+std::array<uint8_t, RMW_GID_STORAGE_SIZE> Entity::copy_gid() const
 {
   return gid_;
 }
@@ -671,7 +863,7 @@ std::string demangle_name(const std::string & input)
 }  // namespace liveliness
 
 ///=============================================================================
-size_t hash_gid(const std::array<uint8_t, 16> gid)
+size_t hash_gid(const std::array<uint8_t, RMW_GID_STORAGE_SIZE> gid)
 {
   std::stringstream hash_str;
   hash_str << std::hex;

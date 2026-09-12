@@ -26,12 +26,13 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
+#include <cstddef>
 #include <cstdint>
 #include <iostream>
+#include <optional>
+#include <stdexcept>
 #include <string>
 #include <vector>
-#include <optional>
-#include <sstream>
 
 #include "config_generator.hpp"
 
@@ -84,7 +85,7 @@ std::optional<uint32_t> parse_uint(const std::string & s)
 }  // namespace
 
 //==============================================================================
-int main(int argc, char * argv[])
+int main(int argc, char *argv[])
 {
   CommandLineArgs args;
   std::vector<std::string> raw_args(argv + 1, argv + argc);

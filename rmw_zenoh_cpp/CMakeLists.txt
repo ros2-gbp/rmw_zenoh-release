@@ -1,11 +1,5 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.20)
 project(rmw_zenoh_cpp)
-
-# Default to C++17
-if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 17)
-  set(CMAKE_CXX_STANDARD_REQUIRED ON)
-endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -13,18 +7,25 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
+# ament_cmake_ros_core provides the ament_ros_defaults target which sets the
+# default C++ (C++20) and C (C17) standards for ROS packages.
+find_package(ament_cmake_ros_core REQUIRED)
 
 find_package(ament_index_cpp REQUIRED)
 find_package(fastcdr CONFIG REQUIRED)
+find_package(nlohmann_json REQUIRED)
 find_package(rcpputils REQUIRED)
 find_package(rcutils REQUIRED)
+find_package(rosidl_buffer_backend_registry REQUIRED)
 find_package(rosidl_typesupport_fastrtps_c REQUIRED)
 find_package(rosidl_typesupport_fastrtps_cpp REQUIRED)
 find_package(rmw REQUIRED)
+find_package(rmw_test_fixture REQUIRED)
 find_package(tracetools REQUIRED)
 find_package(zenoh_cpp_vendor REQUIRED)
 
 add_library(rmw_zenoh_cpp SHARED
+  src/detail/buffer_backend_loader.cpp
   src/detail/attachment_helpers.cpp
   src/detail/cdr.cpp
   src/detail/event.cpp
@@ -50,6 +51,7 @@ add_library(rmw_zenoh_cpp SHARED
   src/rmw_event.cpp
   src/rmw_get_network_flow_endpoints.cpp
   src/rmw_get_node_info_and_types.cpp
+  src/rmw_get_service_endpoint_info.cpp
   src/rmw_get_service_names_and_types.cpp
   src/rmw_get_topic_endpoint_info.cpp
   src/rmw_get_topic_names_and_types.cpp
@@ -65,14 +67,22 @@ target_link_libraries(rmw_zenoh_cpp
     fastcdr
     rcpputils::rcpputils
     rcutils::rcutils
+    rosidl_buffer_backend_registry::rosidl_buffer_backend_registry
     rosidl_typesupport_fastrtps_c::rosidl_typesupport_fastrtps_c
     rosidl_typesupport_fastrtps_cpp::rosidl_typesupport_fastrtps_cpp
     rmw::rmw
     tracetools::tracetools
     zenohcxx::zenohc
+  PUBLIC
+    ament_cmake_ros_core::ament_ros_defaults
 )
 
 configure_rmw_library(rmw_zenoh_cpp)
+
+target_include_directories(rmw_zenoh_cpp
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
 
 target_include_directories(rmw_zenoh_cpp PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -86,11 +96,33 @@ target_compile_definitions(rmw_zenoh_cpp
     RMW_VERSION_PATCH=${rmw_VERSION_PATCH}
 )
 
+add_library(rmw_zenoh_cpp_test_fixture SHARED
+  src/detail/logging.cpp
+  src/detail/zenoh_config.cpp
+  src/rmw_test_fixture.cpp
+)
+
+target_compile_definitions(rmw_zenoh_cpp_test_fixture PRIVATE
+  RMW_TEST_FIXTURE_BUILDING_DLL
+)
+
+target_link_libraries(rmw_zenoh_cpp_test_fixture
+  PRIVATE
+    ament_index_cpp::ament_index_cpp
+    nlohmann_json::nlohmann_json
+    rcpputils::rcpputils
+    rmw_test_fixture::rmw_test_fixture
+    zenohcxx::zenohc
+  PUBLIC
+    ament_cmake_ros_core::ament_ros_defaults
+)
+
 ament_export_targets(export_rmw_zenoh_cpp)
+ament_export_dependencies(ament_cmake_ros_core)
 
 register_rmw_implementation(
-  "c:rosidl_typesupport_c:rosidl_typesupport_fastrtps_c:rosidl_typesupport_introspection_c"
-  "cpp:rosidl_typesupport_cpp:rosidl_typesupport_fastrtps_cpp:rosidl_typesupport_introspection_cpp")
+  "c:rosidl_typesupport_fastrtps_c:rosidl_typesupport_introspection_c"
+  "cpp:rosidl_typesupport_fastrtps_cpp:rosidl_typesupport_introspection_cpp")
 
 if(BUILD_TESTING)
   find_package(ament_cmake_copyright REQUIRED)
@@ -107,7 +139,7 @@ if(BUILD_TESTING)
 endif()
 
 install(
-  TARGETS rmw_zenoh_cpp
+  TARGETS rmw_zenoh_cpp rmw_zenoh_cpp_test_fixture
   EXPORT export_rmw_zenoh_cpp
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
@@ -140,6 +172,7 @@ target_link_libraries(rmw_zenohd
     rcpputils::rcpputils
     rmw::rmw
     zenohcxx::zenohc
+    ament_cmake_ros_core::ament_ros_defaults
 )
 
 install(

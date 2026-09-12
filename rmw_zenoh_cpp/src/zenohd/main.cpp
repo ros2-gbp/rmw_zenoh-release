@@ -13,9 +13,10 @@
 // limitations under the License.
 
 #include <condition_variable>
-#include <cstdio>
+#include <iostream>
 #include <mutex>
-#include <stdexcept>
+#include <optional>
+#include <utility>
 
 #include <zenoh.hxx>
 #include <zenoh/api/session.hxx>
@@ -57,13 +58,9 @@ int main(int argc, char ** argv)
   (void)argc;
   (void)argv;
 
-  // Equivalent to rcutils_set_env_overwrite(ZENOH_LOG_ENV_VAR_STR, ZENOH_LOG_WARN_LEVEL_STR, 0)
-  // in modern ROS 2.
-  if (getenv(ZENOH_LOG_ENV_VAR_STR) == nullptr) {
-    if (!rcutils_set_env(ZENOH_LOG_ENV_VAR_STR, ZENOH_LOG_WARN_LEVEL_STR)) {
-      RMW_SET_ERROR_MSG("Error configuring Zenoh logging.");
-      return RMW_RET_ERROR;
-    }
+  if (!rcutils_set_env_overwrite(ZENOH_LOG_ENV_VAR_STR, ZENOH_LOG_INFO_LEVEL_STR, 0)) {
+    RMW_SET_ERROR_MSG("Error configuring Zenoh logging.");
+    return 1;
   }
 
   // Enable the zenoh built-in logger
