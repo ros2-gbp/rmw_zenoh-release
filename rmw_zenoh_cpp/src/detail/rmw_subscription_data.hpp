@@ -15,8 +15,8 @@
 #ifndef DETAIL__RMW_SUBSCRIPTION_DATA_HPP_
 #define DETAIL__RMW_SUBSCRIPTION_DATA_HPP_
 
+#include <array>
 #include <atomic>
-#include <condition_variable>
 #include <cstddef>
 #include <cstdint>
 #include <deque>
@@ -28,8 +28,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include <array>
-
 #include <zenoh.hxx>
 
 #include "attachment_helpers.hpp"
@@ -38,7 +36,6 @@
 #include "graph_cache.hpp"
 #include "liveliness_utils.hpp"
 #include "message_type_support.hpp"
-#include "type_support_common.hpp"
 #include "zenoh_utils.hpp"
 
 #include "rcutils/allocator.h"
@@ -82,8 +79,8 @@ public:
   // Get a copy of the gid_hash of this SubscriptionData's liveliness::Entity.
   std::size_t gid_hash() const;
 
-  // Get a copy of the TopicInfo of this SubscriptionData.
-  liveliness::TopicInfo topic_info() const;
+  // Borrow the immutable TopicInfo owned by this SubscriptionData's Entity.
+  const liveliness::TopicInfo & topic_info() const;
 
   // Returns true if liveliness token is still valid.
   bool liveliness_is_valid() const;

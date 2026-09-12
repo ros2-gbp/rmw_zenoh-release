@@ -17,12 +17,12 @@
 
 #include <chrono>
 #include <cinttypes>
+#include <cstddef>
+#include <cstdint>
 #include <cstring>
+#include <limits>
 #include <memory>
 #include <mutex>
-#include <new>
-#include <optional>
-#include <string>
 #include <utility>
 
 #include <zenoh.hxx>
@@ -32,7 +32,7 @@
 #include "detail/graph_cache.hpp"
 #include "detail/identifier.hpp"
 #include "detail/liveliness_utils.hpp"
-#include "detail/logging_macros.hpp"
+#include "detail/logging.hpp"
 #include "detail/message_type_support.hpp"
 #include "detail/qos.hpp"
 #include "detail/rmw_context_impl_s.hpp"
@@ -2111,6 +2111,9 @@ check_and_attach_condition(
   const rmw_events_t * const events,
   rmw_zenoh_cpp::rmw_wait_set_data_t * wait_set_data)
 {
+  // This function runs without wait_set_data->condition_mutex. Taking it here
+  // deadlocks against the producers, so this function must never write
+  // wait_set_data->triggered.
   if (guard_conditions) {
     for (size_t i = 0; i < guard_conditions->guard_condition_count; ++i) {
       rmw_zenoh_cpp::GuardCondition * gc =
@@ -2185,11 +2188,6 @@ check_and_attach_condition(
     }
   }
 
-  // No conditions are available. Set the triggered flag of the wait_set to false.
-  // Note that wait_set_data->condition_mutex has been locked before calling
-  // check_and_attach_condition. So it's safe to modify the wait_set_data triggered flag.
-  wait_set_data->triggered = false;
-
   return false;
 }
 }  // namespace
@@ -2242,7 +2240,7 @@ rmw_wait(
 
   {
     // We explicitly do not lock the condition_mutex here
-    // This is fine, as the attachment returns atomically is a signal was ready
+    // This is fine, as the attachment returns atomically if a signal was ready
     // If anything triggers after that point, wait_set_data->triggered will be set
     // to true under mutex.
     // Note taking the mutex here leads to a deadlock.
