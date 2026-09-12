@@ -22,7 +22,6 @@
 
 #include <zenoh.hxx>
 
-#include "buffer_backend_context.hpp"
 #include "graph_cache.hpp"
 #include "rmw_node_data.hpp"
 #include "zenoh_utils.hpp"
@@ -90,9 +89,6 @@ public:
 
   /// Delete the NodeData for a given rmw_node_t if present.
   void delete_node_data(const rmw_node_t * const node);
-
-  /// Return a pointer to the per-context BufferBackendContext.
-  rmw_zenoh_cpp::BufferBackendContext * buffer_backend_context();
 
   // Forward declaration
   class Data;
