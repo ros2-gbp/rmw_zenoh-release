@@ -2,6 +2,9 @@
 Changelog for package zenoh_security_tools
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.2.11 (2026-09-11)
+-------------------
+
 0.2.10 (2026-07-22)
 -------------------
 * finish some TODOs. (`#904 <https://github.com/ros2/rmw_zenoh/issues/904>`_)
