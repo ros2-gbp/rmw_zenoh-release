@@ -203,7 +203,6 @@ void GraphCache::handle_matched_events_for_put(
   if (!entity->topic_info().has_value()) {
     return;
   }
-  const liveliness::TopicInfo topic_info = entity->topic_info().value();
   const bool is_pub = is_entity_pub(*entity);
   // The entity added may be local with callbacks registered but there
   // may be other local entities in the graph that are matched.
@@ -281,7 +280,6 @@ void GraphCache::handle_matched_events_for_del(
   if (!entity->topic_info().has_value()) {
     return;
   }
-  const liveliness::TopicInfo topic_info = entity->topic_info().value();
   if (is_entity_pub(*entity)) {
     // Notify any local subs of a matched event with change -1.
     for (const auto & [_, topic_data_ptr] : topic_qos_map) {
@@ -429,7 +427,7 @@ void GraphCache::update_topic_map_for_del(
       "Report this.");
     return;
   }
-  const liveliness::TopicInfo topic_info = entity->topic_info().value();
+  const liveliness::TopicInfo & topic_info = entity->topic_info().value();
   const bool is_pub = is_entity_pub(*entity);
 
   GraphNode::TopicMap::iterator cache_topic_it =
@@ -1121,6 +1119,12 @@ rmw_ret_t GraphCache::get_entities_info_by_topic(
         endpoints.push_back(ep);
       }
     }
+  }
+
+  // Exit early if there are no endpoints of the requested type,
+  // leaving the output array zero initialized.
+  if (endpoints.empty()) {
+    return RMW_RET_OK;
   }
 
   rmw_ret_t ret = rmw_topic_endpoint_info_array_init_with_size(
