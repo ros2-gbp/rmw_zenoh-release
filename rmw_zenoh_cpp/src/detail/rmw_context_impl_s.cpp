@@ -26,7 +26,6 @@
 #include <thread>
 #include <unordered_map>
 #include <utility>
-#include <variant>
 
 #include <zenoh.hxx>
 

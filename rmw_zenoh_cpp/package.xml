@@ -2,19 +2,17 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>rmw_zenoh_cpp</name>
-  <version>0.14.0</version>
+  <version>0.10.7</version>
   <description>A ROS 2 middleware implementation using zenoh-cpp</description>
   <maintainer email="yadunund@openrobotics.org">Yadunund</maintainer>
 
-  <license>Apache-2.0</license>
+  <license>Apache License 2.0</license>
   <license>BSD</license>  <!-- for simplified_xxhash3.{cpp,hpp} -->
 
   <author email="clalancette@gmail.com">Chris Lalancette</author>
   <author>Franco Cipollone</author>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
-  <buildtool_depend>ament_cmake_ros_core</buildtool_depend>
-  <buildtool_export_depend>ament_cmake_ros_core</buildtool_export_depend>
 
   <build_depend>nlohmann-json-dev</build_depend>
 

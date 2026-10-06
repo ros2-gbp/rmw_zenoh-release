@@ -2,23 +2,16 @@
 Changelog for package zenoh_security_tools
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-0.14.0 (2026-10-06)
+0.10.7 (2026-10-06)
 -------------------
-* Use the SPDX identifier Apache-2.0 in package.xml license tags (`#1073 <https://github.com/ros2/rmw_zenoh/issues/1073>`_)
-* Contributors: Michael Carroll
 
-0.13.0 (2026-09-11)
+0.10.6 (2026-09-11)
 -------------------
-* Granular rclcpp/rclcpp.gpp and include what you use (`#1043 <https://github.com/ros2/rmw_zenoh/issues/1043>`_)
-* Contributors: Alejandro Hernández Cordero
 
-0.12.0 (2026-07-22)
+0.10.5 (2026-07-22)
 -------------------
-* publish-deny topic correctly denied (`#1007 <https://github.com/ros2/rmw_zenoh/issues/1007>`_)
-* use C++ 20 in default. (`#1006 <https://github.com/ros2/rmw_zenoh/issues/1006>`_)
-* Contributors: Alejandro Hernandez Cordero, Tomoya Fujita
 
-0.11.0 (2026-05-07)
+0.10.4 (2026-04-30)
 -------------------
 
 0.10.3 (2026-04-14)

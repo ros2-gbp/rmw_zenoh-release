@@ -15,8 +15,8 @@
 #ifndef DETAIL__EVENT_HPP_
 #define DETAIL__EVENT_HPP_
 
-#include <cstddef>
-#include <cstdint>
+#include <deque>
+#include <memory>
 #include <mutex>
 #include <string>
 

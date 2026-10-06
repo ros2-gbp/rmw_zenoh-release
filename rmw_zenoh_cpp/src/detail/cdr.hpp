@@ -15,8 +15,6 @@
 #ifndef DETAIL__CDR_HPP_
 #define DETAIL__CDR_HPP_
 
-#include <cstddef>
-
 #include "fastcdr/Cdr.h"
 #include "fastcdr/FastBuffer.h"
 

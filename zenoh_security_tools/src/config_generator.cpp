@@ -30,27 +30,23 @@
 
 #include <tinyxml2.h>
 
-#include <cstddef>
-#include <cstdint>
-#include <cstring>
+#include <iostream>
 #include <filesystem>
 #include <fstream>
-#include <iostream>
 #include <optional>
-#include <set>
 #include <stdexcept>
 #include <string>
 #include <utility>
+#include <set>
 
 #include <nlohmann/json.hpp>
-#include <zenoh.hxx>
 
 #include "rcpputils/scope_exit.hpp"
 #include "rcutils/allocator.h"
-#include "rcutils/types/rcutils_ret.h"
 #include "rcutils/types/string_map.h"
-#include "rmw/ret_types.h"
 #include "rmw_security_common/security.hpp"
+
+#include <zenoh.hxx>
 
 static const char * root_str = "policy";
 static const char * enclaves_str = "enclaves";
@@ -556,7 +552,7 @@ void ConfigGenerator::parse_topics(
                 if (permission == "ALLOW") {
                   topics_pub_allow_.insert(check_name(topic_node->GetText(), node_name));
                 } else if (permission == "DENY") {
-                  topics_pub_deny_.insert(check_name(topic_node->GetText(), node_name));
+                  topics_pub_allow_.insert(check_name(topic_node->GetText(), node_name));
                 }
               } else if (topic_type == "subscribe") {
                 if (permission == "ALLOW") {

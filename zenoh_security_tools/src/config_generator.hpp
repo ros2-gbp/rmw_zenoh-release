@@ -32,6 +32,7 @@
 #include <tinyxml2.h>
 
 #include <cstdint>
+#include <filesystem>
 #include <optional>
 #include <set>
 #include <string>

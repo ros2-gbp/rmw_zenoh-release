@@ -38,7 +38,6 @@
 #ifndef DETAIL__SIMPLIFIED_XXHASH3_HPP_
 #define DETAIL__SIMPLIFIED_XXHASH3_HPP_
 
-#include <cstddef>
 #include <cstdint>
 
 typedef struct

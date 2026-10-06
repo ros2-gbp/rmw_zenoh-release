@@ -17,15 +17,13 @@
 #include <fastcdr/FastBuffer.h>
 
 #include <array>
-#include <atomic>
-#include <cstddef>
-#include <cstdint>
-#include <cstring>
+#include <cinttypes>
 #include <limits>
 #include <memory>
 #include <mutex>
-#include <stdexcept>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -35,6 +33,7 @@
 #include "cdr.hpp"
 #include "liveliness_utils.hpp"
 #include "logging_macros.hpp"
+#include "message_type_support.hpp"
 #include "qos.hpp"
 #include "rmw_context_impl_s.hpp"
 

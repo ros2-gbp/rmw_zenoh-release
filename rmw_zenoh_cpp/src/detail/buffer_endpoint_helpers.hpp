@@ -16,7 +16,6 @@
 #define DETAIL__BUFFER_ENDPOINT_HELPERS_HPP_
 
 #include <array>
-#include <cstddef>
 #include <cstdint>
 #include <iomanip>
 #include <sstream>

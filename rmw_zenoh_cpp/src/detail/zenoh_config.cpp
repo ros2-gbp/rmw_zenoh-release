@@ -16,15 +16,9 @@
 
 #include <rcutils/env.h>
 
-#include <cstddef>
-#include <cstdint>
-#include <filesystem>
 #include <limits>
-#include <optional>
 #include <sstream>
 #include <string>
-#include <unordered_map>
-#include <utility>
 
 #include <zenoh.hxx>
 #include <zenoh/api/config.hxx>
