@@ -1,4 +1,4 @@
-// Copyright 2024 Open Source Robotics Foundation, Inc.
+// Copyright 2026 Open Source Robotics Foundation, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,29 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef DETAIL__CDR_HPP_
-#define DETAIL__CDR_HPP_
+#ifndef DETAIL__BUFFER_BACKEND_LOADER_HPP_
+#define DETAIL__BUFFER_BACKEND_LOADER_HPP_
 
-#include <cstddef>
+#include "buffer_backend_context.hpp"
 
-#include "fastcdr/Cdr.h"
-#include "fastcdr/FastBuffer.h"
-
-// A wrapper class to paper over the differences between Fast-CDR v1 and Fast-CDR v2
 namespace rmw_zenoh_cpp
 {
-class Cdr final
-{
-public:
-  explicit Cdr(eprosima::fastcdr::FastBuffer & fastbuffer);
 
-  eprosima::fastcdr::Cdr & get_cdr();
+/// Load buffer backend plugins and register them with FastCDR serialization.
+/// Populates an RMW-context-local serialization map so multiple contexts in the
+/// same process do not share mutable global descriptor state.
+void initialize_buffer_backends(BufferBackendContext & context);
 
-  size_t get_serialized_data_length() const;
+/// Clear context-local serialization maps.
+void shutdown_buffer_backends(BufferBackendContext & context);
 
-private:
-  eprosima::fastcdr::Cdr cdr_;
-};
 }  // namespace rmw_zenoh_cpp
 
-#endif  // DETAIL__CDR_HPP_
+#endif  // DETAIL__BUFFER_BACKEND_LOADER_HPP_

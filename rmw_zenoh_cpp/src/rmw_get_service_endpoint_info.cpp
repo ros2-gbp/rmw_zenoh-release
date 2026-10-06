@@ -1,4 +1,4 @@
-// Copyright 2023 Open Source Robotics Foundation, Inc.
+// Copyright 2025 Minju Lee (이민주).
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,28 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #include "detail/identifier.hpp"
 #include "detail/liveliness_utils.hpp"
 #include "detail/rmw_context_impl_s.hpp"
 
 #include "rcutils/allocator.h"
 
-#include "rmw/get_topic_endpoint_info.h"
+#include "rmw/get_service_endpoint_info.h"
 #include "rmw/impl/cpp/macros.hpp"
 #include "rmw/types.h"
 
 extern "C"
 {
 ///=============================================================================
-/// Retrieve endpoint information for each known publisher of a given topic.
+/// Retrieve endpoint information for each known client of a given service.
 rmw_ret_t
-rmw_get_publishers_info_by_topic(
+rmw_get_clients_info_by_service(
   const rmw_node_t * node,
   rcutils_allocator_t * allocator,
-  const char * topic_name,
+  const char * service_name,
   bool no_mangle,
-  rmw_topic_endpoint_info_array_t * publishers_info)
+  rmw_service_endpoint_info_array_t * clients_info)
 {
   RMW_CHECK_ARGUMENT_FOR_NULL(node, RMW_RET_INVALID_ARGUMENT);
   RMW_CHECK_TYPE_IDENTIFIERS_MATCH(
@@ -45,29 +44,26 @@ rmw_get_publishers_info_by_topic(
   RMW_CHECK_ARGUMENT_FOR_NULL(node->context->impl, RMW_RET_INVALID_ARGUMENT);
   rmw_context_impl_t * context_impl = static_cast<rmw_context_impl_t *>(node->context->impl);
   RMW_CHECK_ARGUMENT_FOR_NULL(context_impl, RMW_RET_INVALID_ARGUMENT);
-  RCUTILS_CHECK_ALLOCATOR_WITH_MSG(
-    allocator, "allocator argument is invalid", return RMW_RET_INVALID_ARGUMENT);
-  RMW_CHECK_ARGUMENT_FOR_NULL(topic_name, RMW_RET_INVALID_ARGUMENT);
-  if (RMW_RET_OK != rmw_topic_endpoint_info_array_check_zero(publishers_info)) {
+  if (RMW_RET_OK != rmw_service_endpoint_info_array_check_zero(clients_info)) {
     return RMW_RET_INVALID_ARGUMENT;
   }
-  return context_impl->graph_cache()->get_entities_info_by_topic(
-    rmw_zenoh_cpp::liveliness::EntityType::Publisher,
+  return context_impl->graph_cache()->get_entities_info_by_service(
+    rmw_zenoh_cpp::liveliness::EntityType::Client,
     allocator,
-    topic_name,
+    service_name,
     no_mangle,
-    publishers_info);
+    clients_info);
 }
 
 ///=============================================================================
-/// Retrieve endpoint information for each known subscription of a given topic.
+/// Retrieve endpoint information for each known server of a given service.
 rmw_ret_t
-rmw_get_subscriptions_info_by_topic(
+rmw_get_servers_info_by_service(
   const rmw_node_t * node,
   rcutils_allocator_t * allocator,
-  const char * topic_name,
+  const char * service_name,
   bool no_mangle,
-  rmw_topic_endpoint_info_array_t * subscriptions_info)
+  rmw_service_endpoint_info_array_t * servers_info)
 {
   RMW_CHECK_ARGUMENT_FOR_NULL(node, RMW_RET_INVALID_ARGUMENT);
   RMW_CHECK_TYPE_IDENTIFIERS_MATCH(
@@ -79,17 +75,14 @@ rmw_get_subscriptions_info_by_topic(
   RMW_CHECK_ARGUMENT_FOR_NULL(node->context->impl, RMW_RET_INVALID_ARGUMENT);
   rmw_context_impl_t * context_impl = static_cast<rmw_context_impl_t *>(node->context->impl);
   RMW_CHECK_ARGUMENT_FOR_NULL(context_impl, RMW_RET_INVALID_ARGUMENT);
-  RCUTILS_CHECK_ALLOCATOR_WITH_MSG(
-    allocator, "allocator argument is invalid", return RMW_RET_INVALID_ARGUMENT);
-  RMW_CHECK_ARGUMENT_FOR_NULL(topic_name, RMW_RET_INVALID_ARGUMENT);
-  if (RMW_RET_OK != rmw_topic_endpoint_info_array_check_zero(subscriptions_info)) {
+  if (RMW_RET_OK != rmw_service_endpoint_info_array_check_zero(servers_info)) {
     return RMW_RET_INVALID_ARGUMENT;
   }
-  return context_impl->graph_cache()->get_entities_info_by_topic(
-    rmw_zenoh_cpp::liveliness::EntityType::Subscription,
+  return context_impl->graph_cache()->get_entities_info_by_service(
+    rmw_zenoh_cpp::liveliness::EntityType::Service,
     allocator,
-    topic_name,
+    service_name,
     no_mangle,
-    subscriptions_info);
+    servers_info);
 }
 }  // extern "C"

@@ -14,6 +14,7 @@
 
 #include "rmw_node_data.hpp"
 
+#include <atomic>
 #include <cstddef>
 #include <memory>
 #include <mutex>
@@ -23,6 +24,8 @@
 #include "logging_macros.hpp"
 
 #include "rcpputils/scope_exit.hpp"
+
+#include "rmw/error_handling.h"
 
 namespace rmw_zenoh_cpp
 {
@@ -391,8 +394,7 @@ rmw_ret_t NodeData::shutdown()
 {
   rmw_ret_t ret = RMW_RET_OK;
   bool expected = false;
-  if (!is_shutdown_.compare_exchange_strong(
-      expected, true, std::memory_order_acq_rel,
+  if (!is_shutdown_.compare_exchange_strong(expected, true, std::memory_order_acq_rel,
       std::memory_order_relaxed))
   {
     return ret;
