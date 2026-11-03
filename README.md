@@ -1,3 +1,32 @@
+## rmw_zenoh (jazzy) - 0.2.13-1
+
+The packages in the `rmw_zenoh` repository were released into the `jazzy` distro by running `/usr/bin/bloom-release --rosdistro jazzy --track jazzy rmw_zenoh` on `Tue, 03 Nov 2026 12:18:48 -0000`
+
+These packages were released:
+- `rmw_zenoh_cpp`
+- `zenoh_cpp_vendor`
+- `zenoh_security_tools`
+
+These packages were explicitly ignored:
+- `test_rmw_zenoh_cpp`
+
+Version of package(s) in repository `rmw_zenoh`:
+
+- upstream repository: https://github.com/ros2/rmw_zenoh.git
+- release repository: https://github.com/ros2-gbp/rmw_zenoh-release.git
+- rosdistro version: `0.2.12-1`
+- old version: `0.2.12-1`
+- new version: `0.2.13-1`
+
+Versions of tools used:
+
+- bloom version: `0.14.4`
+- catkin_pkg version: `1.1.1`
+- rosdep version: `0.27.0`
+- rosdistro version: `1.1.0`
+- vcstools version: `0.1.42`
+
+
 ## rmw_zenoh (kilted) - 0.6.10-1
 
 The packages in the `rmw_zenoh` repository were released into the `kilted` distro by running `/usr/bin/bloom-release --rosdistro kilted --track kilted rmw_zenoh` on `Tue, 03 Nov 2026 12:17:07 -0000`
