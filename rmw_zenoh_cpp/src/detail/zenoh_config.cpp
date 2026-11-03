@@ -25,8 +25,7 @@
 
 #include "logging_macros.hpp"
 
-#include <ament_index_cpp/get_package_share_path.hpp>
-#include <ament_index_cpp/get_package_prefix.hpp> /* for PackageNotFoundError */
+#include <ament_index_cpp/get_package_share_directory.hpp>
 #include <rmw/impl/cpp/macros.hpp>
 
 ///=============================================================================
@@ -54,9 +53,9 @@ static const char * zenoh_config_override = "ZENOH_CONFIG_OVERRIDE";
 
 std::optional<zenoh::Config> _get_z_config(
   const char * envar_name,
-  const std::filesystem::path & default_uri)
+  const char * default_uri)
 {
-  std::filesystem::path configured_uri;
+  const char * configured_uri;
   const char * envar_uri;
   // Get the path to the zenoh configuration file from the environment variable.
   if (NULL != rcutils_get_env(envar_name, &envar_uri)) {
@@ -65,17 +64,16 @@ std::optional<zenoh::Config> _get_z_config(
       "rmw_zenoh_cpp", "Envar %s cannot be read.", envar_name);
     return std::nullopt;
   }
-  std::filesystem::path envar_uri_p(envar_uri);
   // If the environment variable is set, try to read the configuration from the file,
   // if the environment variable is not set use internal configuration
-  configured_uri = envar_uri[0] != '\0' ? envar_uri_p : default_uri;
+  configured_uri = envar_uri[0] != '\0' ? envar_uri : default_uri;
   // Try to read the configuration
   zenoh::ZResult result;
-  zenoh::Config config = zenoh::Config::from_file(configured_uri.string(), &result);
+  zenoh::Config config = zenoh::Config::from_file(configured_uri, &result);
   if (result != Z_OK) {
     RMW_ZENOH_LOG_ERROR_NAMED(
       "rmw_zenoh_cpp",
-      "Invalid configuration file %s", configured_uri.c_str());
+      "Invalid configuration file %s", configured_uri);
     return std::nullopt;
   }
 
@@ -106,7 +104,7 @@ std::optional<zenoh::Config> _get_z_config(
 
   RMW_ZENOH_LOG_DEBUG_NAMED(
     "rmw_zenoh_cpp",
-    "configured using configuration file %s", configured_uri.c_str());
+    "configured using configuration file %s", configured_uri);
   return config;
 }
 }  // namespace
@@ -120,23 +118,12 @@ std::optional<zenoh::Config> get_z_config(const ConfigurableEntity & entity)
       "rmw_zenoh_cpp", "get_z_config called with invalid ConfigurableEntity.");
     return std::nullopt;
   }
+  // Get the absolute path to the default configuration file.
+  static const std::string path_to_config_folder =
+    ament_index_cpp::get_package_share_directory("rmw_zenoh_cpp") + "/config/";
+  const std::string default_config_path = path_to_config_folder + envar_map_it->second.second;
 
-  std::filesystem::path default_config_path;
-
-  try {
-    // Get the absolute path to the default configuration file.
-    std::filesystem::path path_to_config_folder =
-      ament_index_cpp::get_package_share_path("rmw_zenoh_cpp") / "config";
-
-    default_config_path = path_to_config_folder / envar_map_it->second.second;
-  } catch (const ament_index_cpp::PackageNotFoundError & e) {
-    RMW_ZENOH_LOG_WARN_NAMED(
-      "rmw_zenoh_cpp",
-      "Failed to find rmw_zenoh_cpp package in ament_index (%s). "
-      "Relying on 'ZENOH_*_CONFIG_URI' ENV vars.", e.what());
-  }
-
-  return _get_z_config(envar_map_it->second.first, default_config_path);
+  return _get_z_config(envar_map_it->second.first, default_config_path.c_str());
 }
 
 ///=============================================================================

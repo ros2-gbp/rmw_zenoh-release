@@ -100,9 +100,7 @@ rmw_ret_t QoS::best_available_qos(
     case RMW_QOS_POLICY_HISTORY_SYSTEM_DEFAULT:
     case RMW_QOS_POLICY_HISTORY_UNKNOWN:
       qos_profile->history = default_qos_.history;
-      break;
-    case RMW_QOS_POLICY_HISTORY_KEEP_LAST:
-    case RMW_QOS_POLICY_HISTORY_KEEP_ALL:
+    default:
       break;
   }
 
@@ -114,10 +112,7 @@ rmw_ret_t QoS::best_available_qos(
     case RMW_QOS_POLICY_RELIABILITY_SYSTEM_DEFAULT:
     case RMW_QOS_POLICY_RELIABILITY_UNKNOWN:
       qos_profile->reliability = default_qos_.reliability;
-      break;
-    case RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT:
-    case RMW_QOS_POLICY_RELIABILITY_RELIABLE:
-    case RMW_QOS_POLICY_RELIABILITY_BEST_AVAILABLE:
+    default:
       break;
   }
 
@@ -125,10 +120,7 @@ rmw_ret_t QoS::best_available_qos(
     case RMW_QOS_POLICY_DURABILITY_SYSTEM_DEFAULT:
     case RMW_QOS_POLICY_DURABILITY_UNKNOWN:
       qos_profile->durability = default_qos_.durability;
-      break;
-    case RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL:
-    case RMW_QOS_POLICY_DURABILITY_VOLATILE:
-    case RMW_QOS_POLICY_DURABILITY_BEST_AVAILABLE:
+    default:
       break;
   }
 
@@ -151,10 +143,7 @@ rmw_ret_t QoS::best_available_qos(
     case RMW_QOS_POLICY_LIVELINESS_SYSTEM_DEFAULT:
     case RMW_QOS_POLICY_LIVELINESS_UNKNOWN:
       qos_profile->liveliness = default_qos_.liveliness;
-      break;
-    case RMW_QOS_POLICY_LIVELINESS_AUTOMATIC:
-    case RMW_QOS_POLICY_LIVELINESS_MANUAL_BY_TOPIC:
-    case RMW_QOS_POLICY_LIVELINESS_BEST_AVAILABLE:
+    default:
       break;
   }
 

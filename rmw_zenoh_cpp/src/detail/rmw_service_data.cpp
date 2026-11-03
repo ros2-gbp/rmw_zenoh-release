@@ -236,7 +236,7 @@ bool ServiceData::liveliness_is_valid() const
 ///=============================================================================
 void ServiceData::add_new_query(std::unique_ptr<ZenohQuery> query)
 {
-  std::unique_lock<std::mutex> lock(mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   if (is_shutdown_.load(std::memory_order_acquire)) {
     RMW_ZENOH_LOG_DEBUG_NAMED(
       "rmw_zenoh_cpp",
@@ -261,15 +261,12 @@ void ServiceData::add_new_query(std::unique_ptr<ZenohQuery> query)
   query_queue_.emplace_back(std::move(query));
 
   // Since we added new data, trigger user callback and guard condition if they are available
-  // (wait set notified under mutex_, user callback called without it).
+  data_callback_mgr_.trigger_callback();
   if (wait_set_data_ != nullptr) {
     std::lock_guard<std::mutex> wait_set_lock(wait_set_data_->condition_mutex);
     wait_set_data_->triggered = true;
     wait_set_data_->condition_variable.notify_one();
   }
-
-  lock.unlock();
-  data_callback_mgr_.trigger_callback();
 }
 
 ///=============================================================================
@@ -489,7 +486,7 @@ void ServiceData::set_on_new_request_callback(
   rmw_event_callback_t callback,
   const void * user_data)
 {
-  // No mutex_ here: data_callback_mgr_ has its own lock.
+  std::lock_guard<std::mutex> lock(mutex_);
   data_callback_mgr_.set_callback(user_data, std::move(callback));
 }
 
