@@ -13,12 +13,13 @@
 // limitations under the License.
 
 #include <algorithm>
-#include <cstddef>
-#include <cstdint>
-#include <cstring>
+#include <array>
+#include <functional>
 #include <limits>
 #include <memory>
 #include <mutex>
+#include <optional>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -172,17 +173,6 @@ GraphCache::update_topic_map_for_put(
     return {};
   }
   // The topic type already exists.
-  GraphNode::TopicQoSMap::iterator topic_qos_map_it =
-    topic_type_map_it->second.find(qos_str);
-  if (topic_qos_map_it != topic_type_map_it->second.end()) {
-    const TopicData::EntitySet & entities =
-      is_pub ? topic_qos_map_it->second->pubs_ : topic_qos_map_it->second->subs_;
-    if (entities.count(entity) > 0) {
-      // Buffer-aware endpoints are added both manually and through their liveliness token,
-      // so ignore the second put instead of reporting the match again.
-      return {};
-    }
-  }
   if (report_events) {
     // With Zenoh, as long as topic name and type match, transport will ensure
     // payloads are received by subs. Hence, we can check for matched events
@@ -192,6 +182,8 @@ GraphCache::update_topic_map_for_put(
       topic_type_map_it->second);
   }
   // We check if an entity with the exact same qos also exists.
+  GraphNode::TopicQoSMap::iterator topic_qos_map_it =
+    topic_type_map_it->second.find(qos_str);
   if (topic_qos_map_it == topic_type_map_it->second.end()) {
     // First time this qos is added.
     // Update cache.

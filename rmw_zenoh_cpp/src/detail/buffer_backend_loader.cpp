@@ -14,6 +14,7 @@
 
 #include "buffer_backend_loader.hpp"
 
+#include <cstring>
 #include <memory>
 #include <stdexcept>
 #include <string>

@@ -12,14 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "event.hpp"
-
 #include <algorithm>
-#include <cstdint>
+#include <deque>
+#include <memory>
 #include <mutex>
 #include <stdexcept>
-#include <string>
 #include <unordered_map>
+#include <utility>
+
+#include "event.hpp"
+
+#include "logging_macros.hpp"
 
 #include "rmw/error_handling.h"
 

@@ -17,22 +17,23 @@
 #include <fastcdr/FastBuffer.h>
 
 #include <array>
-#include <cstddef>
-#include <cstdint>
+#include <cinttypes>
 #include <cstring>
+#include <iomanip>
 #include <memory>
 #include <mutex>
 #include <optional>
-#include <set>
+#include <sstream>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <variant>
 #include <vector>
+#include <cstdint>
 
 #include "cdr.hpp"
 
 #include "rosidl_buffer_backend_registry/backend_utils.hpp"
+#include "buffer_backend_context.hpp"
 #include "buffer_endpoint_helpers.hpp"
 #include "identifier.hpp"
 #include "rmw_context_impl_s.hpp"
@@ -361,17 +362,10 @@ rmw_ret_t PublisherData::publish_buffer_aware(
     if (cpu_endpoint->pub.has_value()) {
       cpu_endpoint->pub.value().put(std::move(payload), std::move(options), &result);
       if (result != Z_OK) {
-        if (result == Z_ESESSION_CLOSED) {
-          RMW_ZENOH_LOG_WARN_NAMED(
-            "rmw_zenoh_cpp",
-            "unable to publish message since the zenoh session is closed");
-          return RMW_RET_OK;
-        } else {
-          RMW_ZENOH_ROSIDL_BUFFER_LOG_ERROR_NAMED(
-            "rmw_zenoh_cpp",
-            "Failed to publish to CPU-group endpoint '%s'", cpu_group_key.c_str());
-          ret = RMW_RET_ERROR;
-        }
+        RMW_ZENOH_ROSIDL_BUFFER_LOG_ERROR_NAMED(
+          "rmw_zenoh_cpp",
+          "Failed to publish to CPU-group endpoint '%s'", cpu_group_key.c_str());
+        ret = RMW_RET_ERROR;
       }
     }
   }
@@ -419,12 +413,8 @@ rmw_ret_t PublisherData::publish_buffer_aware(
       ros_message, ser.get_cdr(), type_support_impl_, sub.endpoint_info.info,
       backend_ctx->serialization_context);
     if (!ok) {
-      // Keep publishing to the other subscribers.
-      RMW_ZENOH_ROSIDL_BUFFER_LOG_ERROR_NAMED(
-        "rmw_zenoh_cpp",
-        "Failed to serialize message for endpoint '%s'", sub.endpoint_key.c_str());
-      ret = RMW_RET_ERROR;
-      continue;
+      RMW_SET_ERROR_MSG("could not serialize ROS message with endpoint awareness");
+      return RMW_RET_ERROR;
     }
 
     size_t data_length = ser.get_serialized_data_length();
@@ -478,24 +468,14 @@ rmw_ret_t PublisherData::publish_buffer_aware(
       endpoint->pub.value().put(std::move(payload), std::move(options), &result);
 
       if (result != Z_OK) {
-        if (result == Z_ESESSION_CLOSED) {
-          RMW_ZENOH_LOG_WARN_NAMED(
-            "rmw_zenoh_cpp",
-            "unable to publish message since the zenoh session is closed");
-          return RMW_RET_OK;
-        } else {
-          RMW_ZENOH_ROSIDL_BUFFER_LOG_ERROR_NAMED(
-            "rmw_zenoh_cpp",
-            "Failed to publish to endpoint '%s'", sub.endpoint_key.c_str());
-          ret = RMW_RET_ERROR;
-        }
+        RMW_ZENOH_ROSIDL_BUFFER_LOG_ERROR_NAMED(
+          "rmw_zenoh_cpp",
+          "Failed to publish to endpoint '%s'", sub.endpoint_key.c_str());
+        ret = RMW_RET_ERROR;
       }
     }
   }
 
-  if (RMW_RET_OK != ret) {
-    RMW_SET_ERROR_MSG("unable to publish message");
-  }
   return ret;
 }
 

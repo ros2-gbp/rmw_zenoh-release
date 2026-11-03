@@ -17,12 +17,12 @@
 
 #include <chrono>
 #include <cinttypes>
-#include <cstddef>
-#include <cstdint>
 #include <cstring>
-#include <limits>
 #include <memory>
 #include <mutex>
+#include <new>
+#include <optional>
+#include <string>
 #include <utility>
 
 #include <zenoh.hxx>
@@ -32,7 +32,7 @@
 #include "detail/graph_cache.hpp"
 #include "detail/identifier.hpp"
 #include "detail/liveliness_utils.hpp"
-#include "detail/logging.hpp"
+#include "detail/logging_macros.hpp"
 #include "detail/message_type_support.hpp"
 #include "detail/qos.hpp"
 #include "detail/rmw_context_impl_s.hpp"
@@ -826,7 +826,7 @@ rmw_serialize(
   rmw_zenoh_cpp::Cdr ser(buffer);
 
   auto ret = tss.serialize_ros_message(ros_message, ser.get_cdr(), callbacks);
-  serialized_message->buffer_length = ser.get_serialized_data_length();
+  serialized_message->buffer_length = data_length;
   serialized_message->buffer_capacity = data_length;
   return ret == true ? RMW_RET_OK : RMW_RET_ERROR;
 }
