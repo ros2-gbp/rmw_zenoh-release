@@ -1,11 +1,9 @@
 cmake_minimum_required(VERSION 3.16)
 project(zenoh_cpp_vendor)
 
-# Default to C++17
-if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 17)
-  set(CMAKE_CXX_STANDARD_REQUIRED ON)
-endif()
+# Note: this package has no compiled targets of its own; it only drives the
+# vendored zenoh-c / zenoh-cpp external projects, which set their own C++
+# standard. There is therefore no local target to apply a C++ standard to.
 
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_vendor_package REQUIRED)
@@ -28,18 +26,12 @@ else()
   include(get_cargo_version.cmake)
   get_cargo_version()
 
-  if(CARGO_VERSION AND CARGO_VERSION VERSION_LESS 1.88)
-    set(ZENOHC_MSRV_1_75 TRUE)
-  else()
-    set(ZENOHC_MSRV_1_75 FALSE)
-  endif()
-
   # zenoh version:     https://github.com/eclipse-zenoh/zenoh/commit/9fcd9cb5d364192c3e8a27e66de76f4bc750d1d5
-  # zenoh-c version:   https://github.com/eclipse-zenoh/zenoh-c/commit/b8df2bb0bca17c14cf2a7b4813199af9f92f101a (branch ROS/rust-1.75-zenoh-c-07b0d432)
+  # zenoh-c version:   https://github.com/eclipse-zenoh/zenoh-c/commit/07b0d432121933cb368528153df000463292635d
   # zenoh-cpp version: https://github.com/eclipse-zenoh/zenoh-cpp/commit/1e343e61b92a73af3bc247c178214bcc1042c34c
   # This corresponds to zenoh-c 1.10.1 plus few fixes, including https://github.com/eclipse-zenoh/zenoh/pull/2779
   # and few changes to build with Rust 1.75.
-  set(zenoh_c_commit b8df2bb0bca17c14cf2a7b4813199af9f92f101a)
+  set(zenoh_c_commit 07b0d432121933cb368528153df000463292635d)
   set(zenoh_cpp_commit 1e343e61b92a73af3bc247c178214bcc1042c34c)
 
   ament_vendor(zenoh_c_vendor
@@ -49,7 +41,6 @@ else()
       "-DZENOHC_CARGO_FLAGS=${ZENOHC_CARGO_FLAGS}"
       "-DZENOHC_BUILD_WITH_UNSTABLE_API=TRUE"
       "-DZENOHC_CUSTOM_TARGET=${ZENOHC_CUSTOM_TARGET}"
-      "-DZENOHC_MSRV_1_75=${ZENOHC_MSRV_1_75}"
   )
 
   ament_vendor(zenoh_cpp_vendor

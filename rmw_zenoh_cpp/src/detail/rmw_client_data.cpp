@@ -17,13 +17,15 @@
 #include <fastcdr/FastBuffer.h>
 
 #include <array>
-#include <cinttypes>
+#include <atomic>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
 #include <limits>
 #include <memory>
 #include <mutex>
+#include <stdexcept>
 #include <string>
-#include <unordered_map>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -33,7 +35,6 @@
 #include "cdr.hpp"
 #include "liveliness_utils.hpp"
 #include "logging_macros.hpp"
-#include "message_type_support.hpp"
 #include "qos.hpp"
 #include "rmw_context_impl_s.hpp"
 
@@ -42,6 +43,8 @@
 #include "rmw/error_handling.h"
 #include "rmw/get_topic_endpoint_info.h"
 #include "rmw/impl/cpp/macros.hpp"
+
+#include "tracetools/tracetools.h"
 
 namespace rmw_zenoh_cpp
 {
@@ -66,6 +69,9 @@ std::shared_ptr<ClientData> ClientData::make(
     return nullptr;
   }
 
+  rcutils_allocator_t * allocator = &node->context->options.allocator;
+
+  const rosidl_type_hash_t * type_hash = type_support->get_type_hash_func(type_support);
   auto service_members = static_cast<const service_type_support_callbacks_t *>(type_support->data);
   auto request_members = static_cast<const message_type_support_callbacks_t *>(
     service_members->request_members_->data);
@@ -89,9 +95,20 @@ std::shared_ptr<ClientData> ClientData::make(
     return nullptr;
   }
 
-  // Humble doesn't support type hash, but we leave it in place as a constant so we don't have to
-  // change the graph and liveliness token code.
-  const char * type_hash_c_str = "TypeHashNotSupported";
+  // Convert the type hash to a string so that it can be included in the keyexpr.
+  char * type_hash_c_str = nullptr;
+  rcutils_ret_t stringify_ret = rosidl_stringify_type_hash(
+    type_hash,
+    *allocator,
+    &type_hash_c_str);
+  if (RCUTILS_RET_BAD_ALLOC == stringify_ret) {
+    // rosidl_stringify_type_hash already set the error
+    return nullptr;
+  }
+  auto free_type_hash_c_str = rcpputils::make_scope_exit(
+    [&allocator, &type_hash_c_str]() {
+      allocator->deallocate(type_hash_c_str, allocator->state);
+    });
 
   std::size_t domain_id = node_info.domain_id_;
   auto entity = liveliness::Entity::make(
@@ -207,7 +224,7 @@ bool ClientData::liveliness_is_valid() const
 }
 
 ///=============================================================================
-std::array<uint8_t, 16> ClientData::copy_gid() const
+std::array<uint8_t, RMW_GID_STORAGE_SIZE> ClientData::copy_gid() const
 {
   return entity_->copy_gid();
 }
@@ -215,7 +232,7 @@ std::array<uint8_t, 16> ClientData::copy_gid() const
 ///=============================================================================
 void ClientData::add_new_reply(std::unique_ptr<ZenohReply> reply)
 {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::unique_lock<std::mutex> lock(mutex_);
   const rmw_qos_profile_t adapted_qos_profile =
     entity_->topic_info().value().qos_;
   if (adapted_qos_profile.history != RMW_QOS_POLICY_HISTORY_KEEP_ALL &&
@@ -233,12 +250,15 @@ void ClientData::add_new_reply(std::unique_ptr<ZenohReply> reply)
   reply_queue_.emplace_back(std::move(reply));
 
   // Since we added new data, trigger user callback and guard condition if they are available
-  data_callback_mgr_.trigger_callback();
+  // (wait set notified under mutex_, user callback called without it).
   if (wait_set_data_ != nullptr) {
     std::lock_guard<std::mutex> wait_set_lock(wait_set_data_->condition_mutex);
     wait_set_data_->triggered = true;
     wait_set_data_->condition_variable.notify_one();
   }
+
+  lock.unlock();
+  data_callback_mgr_.trigger_callback();
 }
 
 ///=============================================================================
@@ -311,7 +331,7 @@ rmw_ret_t ClientData::take_response(
   memcpy(
     request_header->request_id.writer_guid,
     attachment.copy_gid().data(),
-    16);
+    RMW_GID_STORAGE_SIZE);
   request_header->received_timestamp = latest_reply->get_received_timestamp();
 
   *taken = true;
@@ -365,6 +385,12 @@ rmw_ret_t ClientData::send_request(
   }
   size_t data_length = ser.get_serialized_data_length();
   *sequence_id = sequence_number_++;
+
+  TRACETOOLS_TRACEPOINT(
+    rmw_send_request,
+    static_cast<const void *>(rmw_client_),
+    static_cast<const void *>(ros_request),
+    *sequence_id);
 
   // Send request
   auto opts = zenoh::Querier::GetOptions::create_default();
@@ -458,7 +484,7 @@ void ClientData::set_on_new_response_callback(
   rmw_event_callback_t callback,
   const void * user_data)
 {
-  std::lock_guard<std::mutex> lock(mutex_);
+  // No mutex_ here: data_callback_mgr_ has its own lock.
   data_callback_mgr_.set_callback(user_data, std::move(callback));
 }
 
@@ -487,9 +513,9 @@ bool ClientData::detach_condition_and_queue_is_empty()
 ///=============================================================================
 rmw_ret_t ClientData::shutdown()
 {
+  rmw_ret_t ret = RMW_RET_OK;
   bool expected = false;
-  if (!is_shutdown_.compare_exchange_strong(
-      expected, true, std::memory_order_acq_rel,
+  if (!is_shutdown_.compare_exchange_strong(expected, true, std::memory_order_acq_rel,
       std::memory_order_relaxed))
   {
     return RMW_RET_OK;
@@ -503,7 +529,7 @@ rmw_ret_t ClientData::shutdown()
       RMW_ZENOH_LOG_ERROR_NAMED(
         "rmw_zenoh_cpp",
         "Unable to undeclare the liveliness token");
-      return RMW_RET_ERROR;
+      ret = RMW_RET_ERROR;
     }
   }
   zenoh::ZResult result;
@@ -515,7 +541,7 @@ rmw_ret_t ClientData::shutdown()
     return RMW_RET_ERROR;
   }
 
-  return RMW_RET_OK;
+  return ret;
 }
 
 ///=============================================================================

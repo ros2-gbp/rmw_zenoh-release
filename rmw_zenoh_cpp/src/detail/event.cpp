@@ -12,17 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <algorithm>
-#include <deque>
-#include <memory>
-#include <mutex>
-#include <stdexcept>
-#include <unordered_map>
-#include <utility>
-
 #include "event.hpp"
 
-#include "logging_macros.hpp"
+#include <algorithm>
+#include <cstdint>
+#include <mutex>
+#include <stdexcept>
+#include <string>
+#include <unordered_map>
 
 #include "rmw/error_handling.h"
 
@@ -33,6 +30,11 @@ static const std::unordered_map<rmw_event_type_t, rmw_zenoh_cpp::rmw_zenoh_event
   {RMW_EVENT_REQUESTED_QOS_INCOMPATIBLE, rmw_zenoh_cpp::ZENOH_EVENT_REQUESTED_QOS_INCOMPATIBLE},
   {RMW_EVENT_OFFERED_QOS_INCOMPATIBLE, rmw_zenoh_cpp::ZENOH_EVENT_OFFERED_QOS_INCOMPATIBLE},
   {RMW_EVENT_MESSAGE_LOST, rmw_zenoh_cpp::ZENOH_EVENT_MESSAGE_LOST},
+  {RMW_EVENT_SUBSCRIPTION_MATCHED, rmw_zenoh_cpp::ZENOH_EVENT_SUBSCRIPTION_MATCHED},
+  {RMW_EVENT_PUBLICATION_MATCHED, rmw_zenoh_cpp::ZENOH_EVENT_PUBLICATION_MATCHED},
+  {RMW_EVENT_SUBSCRIPTION_INCOMPATIBLE_TYPE,
+    rmw_zenoh_cpp::ZENOH_EVENT_SUBSCRIPTION_INCOMPATIBLE_TYPE},
+  {RMW_EVENT_PUBLISHER_INCOMPATIBLE_TYPE, rmw_zenoh_cpp::ZENOH_EVENT_PUBLISHER_INCOMPATIBLE_TYPE},
   {RMW_EVENT_LIVELINESS_CHANGED, rmw_zenoh_cpp::ZENOH_EVENT_LIVELINESS_CHANGED},
   {RMW_EVENT_LIVELINESS_LOST, rmw_zenoh_cpp::ZENOH_EVENT_LIVELINESS_LOST},
   {RMW_EVENT_REQUESTED_DEADLINE_MISSED, rmw_zenoh_cpp::ZENOH_EVENT_REQUESTED_DEADLINE_MISSED},
@@ -248,7 +250,7 @@ void EventsManager::notify_event(rmw_zenoh_event_type_t event_id)
   }
 
   std::lock_guard<std::mutex> lock(event_condition_mutex_);
-  auto * wait_set_data = wait_set_data_[event_id];
+  auto *wait_set_data = wait_set_data_[event_id];
   if (wait_set_data != nullptr) {
     std::lock_guard<std::mutex> wait_set_lock(wait_set_data->condition_mutex);
     wait_set_data->triggered = true;

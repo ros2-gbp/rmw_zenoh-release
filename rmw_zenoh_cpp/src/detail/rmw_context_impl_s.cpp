@@ -26,9 +26,12 @@
 #include <thread>
 #include <unordered_map>
 #include <utility>
+#include <variant>
 
 #include <zenoh.hxx>
 
+#include "buffer_backend_context.hpp"
+#include "buffer_backend_loader.hpp"
 #include "graph_cache.hpp"
 #include "guard_condition.hpp"
 #include "identifier.hpp"
@@ -80,9 +83,8 @@ public:
   {
     rmw_ret_t ret = RMW_RET_OK;
     bool expected = false;
-    if (!is_shutdown_.compare_exchange_strong(
-        expected, true, std::memory_order_acq_rel,
-        std::memory_order_relaxed))
+    if (!is_shutdown_.compare_exchange_strong(expected, true, std::memory_order_acq_rel,
+      std::memory_order_relaxed))
     {
       return ret;
     }
@@ -96,6 +98,10 @@ public:
         "rmw_zenoh_cpp",
         "Unable to undeclare the liveliness token");
       return RMW_RET_ERROR;
+    }
+
+    if (buffer_backend_context_) {
+      rmw_zenoh_cpp::shutdown_buffer_backends(*buffer_backend_context_);
     }
 
     // Explicitly close the session before releasing our shared_ptr reference.
@@ -156,6 +162,11 @@ public:
   std::shared_ptr<rmw_zenoh_cpp::BufferPool> serialization_buffer_pool()
   {
     return serialization_buffer_pool_;
+  }
+
+  rmw_zenoh_cpp::BufferBackendContext * buffer_backend_context()
+  {
+    return buffer_backend_context_.get();
   }
 
   bool create_node_data(
@@ -270,9 +281,9 @@ private:
       // Handle SHM allocation size.
       if (const auto shm_alloc_size = rmw_zenoh_cpp::zenoh_shm_alloc_size() ) {
         RMW_ZENOH_LOG_INFO_NAMED(
-          "rmw_zenoh_cpp",
-          "ZENOH_SHM_ALLOC_SIZE=%d overriding the configuration key '%s'.",
-          shm_alloc_size.value(), CONFIG_KEY_SHM_POOL_SIZE);
+            "rmw_zenoh_cpp",
+            "ZENOH_SHM_ALLOC_SIZE=%d overriding the configuration key '%s'.",
+            shm_alloc_size.value(), CONFIG_KEY_SHM_POOL_SIZE);
         config.value().insert_json5(
           CONFIG_KEY_SHM_POOL_SIZE,
           std::to_string(shm_alloc_size.value()));
@@ -281,9 +292,9 @@ private:
       // Handle SHM message size threshold.
       if (const auto shm_threshold = rmw_zenoh_cpp::zenoh_shm_message_size_threshold() ) {
         RMW_ZENOH_LOG_INFO_NAMED(
-          "rmw_zenoh_cpp",
-          "ZENOH_SHM_MESSAGE_SIZE_THRESHOLD=%d overriding the configuration key '%s'.",
-          shm_threshold.value(), CONFIG_KEY_SHM_THRESHOLD_SIZE);
+            "rmw_zenoh_cpp",
+            "ZENOH_SHM_MESSAGE_SIZE_THRESHOLD=%d overriding the configuration key '%s'.",
+            shm_threshold.value(), CONFIG_KEY_SHM_THRESHOLD_SIZE);
         config.value().insert_json5(
           CONFIG_KEY_SHM_THRESHOLD_SIZE,
           std::to_string(shm_threshold.value()));
@@ -317,10 +328,10 @@ private:
         if (result == Z_OK) {
           if (transport_optim_enabled_val != "true") {
             RMW_ZENOH_LOG_INFO_NAMED(
-              "rmw_zenoh_cpp",
-              "SHM is enabled but transport_optimization is not while required "
-              "- overwritting '%s: true' in config.",
-              CONFIG_KEY_SHM_TRANSPORT_OPTIM_ENABLED);
+                "rmw_zenoh_cpp",
+                "SHM is enabled but transport_optimization is not while required "
+                "- overwritting '%s: true' in config.",
+                CONFIG_KEY_SHM_TRANSPORT_OPTIM_ENABLED);
             config.value().insert_json5(
               CONFIG_KEY_SHM_TRANSPORT_OPTIM_ENABLED,
               "true");
@@ -486,14 +497,13 @@ private:
 
     // Initialize the shm subsystem if shared_memory is enabled in the config
     if (shm_enabled) {
-      RMW_ZENOH_LOG_DEBUG_NAMED(
-        "rmw_zenoh_cpp",
+      RMW_ZENOH_LOG_DEBUG_NAMED("rmw_zenoh_cpp",
         "SHM is enabled - allocated size: %d - msg size threshold: %d",
         shm_pool_size,
         msgsize_threshold);
 
       shm_ = std::make_shared<rmw_zenoh_cpp::ShmContext>(
-        msgsize_threshold
+          msgsize_threshold
       );
     } else {
       RMW_ZENOH_LOG_DEBUG_NAMED("rmw_zenoh_cpp", "SHM is disabled");
@@ -505,6 +515,10 @@ private:
 
     // Initialize the serialization buffer pool.
     serialization_buffer_pool_ = std::make_shared<rmw_zenoh_cpp::BufferPool>();
+
+    // Initialize the buffer backend context.
+    buffer_backend_context_ = std::make_unique<rmw_zenoh_cpp::BufferBackendContext>();
+    rmw_zenoh_cpp::initialize_buffer_backends(*buffer_backend_context_);
   }
 
   void init()
@@ -580,6 +594,8 @@ private:
   std::unordered_map<const rmw_node_t *, std::shared_ptr<rmw_zenoh_cpp::NodeData>> nodes_;
 
   zenoh::KeyExpr liveliness_keyexpr_;
+
+  std::unique_ptr<rmw_zenoh_cpp::BufferBackendContext> buffer_backend_context_;
 };
 
 ///=============================================================================
@@ -654,6 +670,12 @@ std::shared_ptr<rmw_zenoh_cpp::GraphCache> rmw_context_impl_s::graph_cache()
 std::shared_ptr<rmw_zenoh_cpp::BufferPool> rmw_context_impl_s::serialization_buffer_pool()
 {
   return data_->serialization_buffer_pool();
+}
+
+///=============================================================================
+rmw_zenoh_cpp::BufferBackendContext * rmw_context_impl_s::buffer_backend_context()
+{
+  return data_->buffer_backend_context();
 }
 
 ///=============================================================================

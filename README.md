@@ -1,13 +1,13 @@
 # rmw_zenoh
 
-[![build](https://github.com/ros2/rmw_zenoh/actions/workflows/build.yaml/badge.svg?branch=humble)](https://github.com/ros2/rmw_zenoh/actions/workflows/build.yaml)
-[![style](https://github.com/ros2/rmw_zenoh/actions/workflows/style.yaml/badge.svg?branch=humble)](https://github.com/ros2/rmw_zenoh/actions/workflows/style.yaml)
+[![build](https://github.com/ros2/rmw_zenoh/actions/workflows/build.yaml/badge.svg)](https://github.com/ros2/rmw_zenoh/actions/workflows/build.yaml)
+[![style](https://github.com/ros2/rmw_zenoh/actions/workflows/style.yaml/badge.svg)](https://github.com/ros2/rmw_zenoh/actions/workflows/style.yaml)
 
 | Package | Status |
 | ------- | ------ |
-| rmw_zenoh_cpp | [![Build Status](https://build.ros2.org/view/Hbin_uJ64/job/Hbin_uJ64__rmw_zenoh_cpp__ubuntu_jammy_amd64__binary/badge/icon)](https://build.ros2.org/view/Hbin_uJ64/job/Hbin_uJ64__rmw_zenoh_cpp__ubuntu_jammy_amd64__binary/) |
-| zenoh_cpp_vendor | [![Build Status](https://build.ros2.org/view/Hbin_uJ64/job/Hbin_uJ64__zenoh_cpp_vendor__ubuntu_jammy_amd64__binary/badge/icon)](https://build.ros2.org/view/Hbin_uJ64/job/Hbin_uJ64__zenoh_cpp_vendor__ubuntu_jammy_amd64__binary/) |
-| zenoh_security_tools | [![Build Status](https://build.ros2.org/view/Hbin_uJ64/job/Hbin_uJ64__zenoh_security_tools__ubuntu_jammy_amd64__binary/badge/icon)](https://build.ros2.org/view/Hbin_uJ64/job/Hbin_uJ64__zenoh_security_tools__ubuntu_jammy_amd64__binary/) |
+| rmw_zenoh_cpp | [![Build Status](https://build.ros2.org/view/Rbin_uR64/job/Rbin_uR64__rmw_zenoh_cpp__ubuntu_resolute_amd64__binary/badge/icon)](https://build.ros2.org/view/Rbin_uR64/job/Rbin_uR64__rmw_zenoh_cpp__ubuntu_resolute_amd64__binary/) |
+| zenoh_cpp_vendor | [![Build Status](https://build.ros2.org/view/Rbin_uR64/job/Rbin_uR64__zenoh_cpp_vendor__ubuntu_resolute_amd64__binary/badge/icon)](https://build.ros2.org/view/Rbin_uR64/job/Rbin_uR64__zenoh_cpp_vendor__ubuntu_resolute_amd64__binary/) |
+| zenoh_security_tools | [![Build Status](https://build.ros2.org/view/Rbin_uR64/job/Rbin_uR64__zenoh_security_tools__ubuntu_resolute_amd64__binary/badge/icon)](https://build.ros2.org/view/Rbin_uR64/job/Rbin_uR64__zenoh_security_tools__ubuntu_resolute_amd64__binary/) |
 
 A ROS 2 RMW implementation based on Zenoh that is written using the zenoh-cpp bindings.
 
@@ -25,7 +25,7 @@ For information about the Design please visit [design](docs/design.md) page.
 `rmw_zenoh` can either be installed via binaries (recommended for stable development) or built from source (recommended if latest features are needed). See instructions below.
 
 ### Binary Installation
-Binary packages for supported ROS 2 distributions (see distro branches) are available on respective [Tier-1](https://www.ros.org/reps/rep-2000.html#support-tiers) platforms for the distributions.
+Binary packages for supported ROS 2 distributions (see distro branches) are available on respective [Tier-1](https://reps.openrobotics.org/rep-2000/#support-tiers) platforms for the distributions.
 First ensure that your system is set up to install ROS 2 binaries by following the instructions [here](https://docs.ros.org/en/rolling/Installation/Ubuntu-Install-Debs.html).
 
 Then install `rmw_zenoh` binaries using the command
@@ -299,6 +299,7 @@ Zenoh automatically handles garbage collection of data in shared memory once all
 - Zenoh SHM works intra- and inter- containers if container's POSIX SHM is configured properly.
 
 ## Security
+
 Security is available in `rmw_zenoh` by means of access control, authentication and encryption.
 The [zenoh_security_tools](./zenoh_security_tools/) package contains a script to generate Zenoh configs with security configured along with documentation on its usage.
 
@@ -376,3 +377,10 @@ For more details, see https://github.com/ros2/rmw_zenoh/issues/170.
 Since Iron, ROS 2 introduced type hashes for messages and `rmw_zenoh` includes these type hashes in the Zenoh keyexpressions it constructs for data exchange. While participants will be discoverable, communication between Humble and newer distributions will fail, resulting in messages being silently dropped.
 
 For more details, see https://github.com/ros2/rmw_zenoh/issues/569.
+
+## Quality Declaration files
+
+Quality Declarations for each package in this repository:
+
+* [`rmw_zenoh_cpp`](rmw_zenoh_cpp/QUALITY_DECLARATION.md)
+* [`zenoh_cpp_vendor`](zenoh_cpp_vendor/QUALITY_DECLARATION.md)
