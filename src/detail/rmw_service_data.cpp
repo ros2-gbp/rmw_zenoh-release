@@ -213,8 +213,7 @@ ServiceData::ServiceData(
   request_type_support_(std::move(request_type_support)),
   response_type_support_(std::move(response_type_support)),
   wait_set_data_(nullptr),
-  is_shutdown_(false),
-  initialized_(false)
+  is_shutdown_(false)
 {
   // Do nothing.
 }
@@ -237,7 +236,7 @@ bool ServiceData::liveliness_is_valid() const
 ///=============================================================================
 void ServiceData::add_new_query(std::unique_ptr<ZenohQuery> query)
 {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::unique_lock<std::mutex> lock(mutex_);
   if (is_shutdown_.load(std::memory_order_acquire)) {
     RMW_ZENOH_LOG_DEBUG_NAMED(
       "rmw_zenoh_cpp",
@@ -262,12 +261,15 @@ void ServiceData::add_new_query(std::unique_ptr<ZenohQuery> query)
   query_queue_.emplace_back(std::move(query));
 
   // Since we added new data, trigger user callback and guard condition if they are available
-  data_callback_mgr_.trigger_callback();
+  // (wait set notified under mutex_, user callback called without it).
   if (wait_set_data_ != nullptr) {
     std::lock_guard<std::mutex> wait_set_lock(wait_set_data_->condition_mutex);
     wait_set_data_->triggered = true;
     wait_set_data_->condition_variable.notify_one();
   }
+
+  lock.unlock();
+  data_callback_mgr_.trigger_callback();
 }
 
 ///=============================================================================
@@ -487,7 +489,7 @@ void ServiceData::set_on_new_request_callback(
   rmw_event_callback_t callback,
   const void * user_data)
 {
-  std::lock_guard<std::mutex> lock(mutex_);
+  // No mutex_ here: data_callback_mgr_ has its own lock.
   data_callback_mgr_.set_callback(user_data, std::move(callback));
 }
 
@@ -525,26 +527,29 @@ rmw_ret_t ServiceData::shutdown()
   }
 
   // Unregister this node from the ROS graph.
-  if (initialized_) {
+  if (token_.has_value()) {
     zenoh::ZResult result;
     std::move(token_).value().undeclare(&result);
     if (result != Z_OK) {
       RMW_ZENOH_LOG_ERROR_NAMED(
         "rmw_zenoh_cpp",
         "Unable to undeclare the liveliness token");
-      return RMW_RET_ERROR;
+      ret = RMW_RET_ERROR;
     }
+  }
 
+  if (qable_.has_value()) {
+    zenoh::ZResult result;
     std::move(qable_).value().undeclare(&result);
     if (result != Z_OK) {
       RMW_ZENOH_LOG_ERROR_NAMED(
         "rmw_zenoh_cpp",
         "Unable to undeclare the queryable");
-      return RMW_RET_ERROR;
+      ret = RMW_RET_ERROR;
     }
   }
 
-  return RMW_RET_OK;
+  return ret;
 }
 
 ///=============================================================================
