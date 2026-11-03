@@ -87,6 +87,9 @@ public:
 
   bool detach_condition_and_queue_is_empty();
 
+  // Shutdown this ServiceData.
+  rmw_ret_t shutdown();
+
   // Check if this ServiceData is shutdown.
   bool is_shutdown() const;
 
@@ -106,10 +109,7 @@ private:
     std::unique_ptr<RequestTypeSupport> request_type_support,
     std::unique_ptr<ResponseTypeSupport> response_type_support);
 
-  // Shutdown this ServiceData.
-  rmw_ret_t shutdown();
-
-  // Internal mutex.
+  // Internal mutex. Lock order: mutex_, then wait_set_data_->condition_mutex.
   mutable std::mutex mutex_;
   // The parent node.
   const rmw_node_t * rmw_node_;
@@ -152,14 +152,13 @@ private:
   // Map to store the sequence_number (as given by the client) -> ZenohQuery
   using SequenceToQuery = std::unordered_map<int64_t, std::unique_ptr<ZenohQuery>>;
   std::unordered_map<size_t, SequenceToQuery> sequence_to_query_map_;
-  // Wait set data.
+  // Wait set data. Guarded by mutex_, also while notifying: detach takes mutex_, so the
+  // wait set outlives the notification.
   rmw_wait_set_data_t * wait_set_data_;
-  // Data callback manager.
+  // Data callback manager. It runs user code, so never call it with mutex_ held.
   DataCallbackManager data_callback_mgr_;
   // Shutdown flag.
   std::atomic<bool> is_shutdown_;
-  // Whether the object has ever successfully been initialized.
-  bool initialized_;
 };
 using ServiceDataPtr = std::shared_ptr<ServiceData>;
 using ServiceDataConstPtr = std::shared_ptr<const ServiceData>;
